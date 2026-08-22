@@ -16,6 +16,10 @@ import { createRequireAuth } from "./auth/require-auth.js";
     res.json({ ok: true, service: "personal-finance-api" });
   });
 
+  app.get("/", (_req, res) => {
+    res.json({ ok: true, service: "personal-finance-api", version: "1.0.0" });
+  });
+
   app.get("/api/profile", requireAuth, (req, res) => {
     res.json({ id: req.user.id, email: req.user.email ?? null });
   });

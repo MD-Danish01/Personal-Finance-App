@@ -6,4 +6,6 @@ import { loadEnv } from "./config/env.js";
 const config = loadEnv();
 const app = createApp(config);
 
-export default app;
+app.listen(config.port, () => {
+  console.log(`Personal finance API listening on port ${config.port}`);
+});

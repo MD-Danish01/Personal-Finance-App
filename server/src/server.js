@@ -1,9 +1,8 @@
-import "dotenv/config";
 import { createApp } from "./app.js";
 import { loadEnv } from "./config/env.js";
 
-const config = loadEnv();
-const app = createApp(config);
+const env = loadEnv();
+const app = createApp(env);
 
 export default app;
 export const config = { runtime: "nodejs" };

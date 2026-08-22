@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 const required = (name) => {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required environment variable: ${name}`);

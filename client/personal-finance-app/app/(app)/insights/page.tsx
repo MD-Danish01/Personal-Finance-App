@@ -1,14 +1,16 @@
 import { getInsights } from "@/lib/api";
 import { formatPercent } from "@/lib/format";
 import { InsightCard } from "@/components/screens/InsightCard";
+import { ProfileAvatar } from "@/components/ui/ProfileAvatar";
 
 export default async function InsightsPage() {
   const insights = await getInsights();
 
   return (
     <div className="px-5 pb-4">
-      <header className="px-1 py-5">
+      <header className="flex items-center justify-between px-1 py-5">
         <h1 className="text-[22px] font-bold tracking-tight">Insights for you</h1>
+        <ProfileAvatar name="Aarav" />
       </header>
 
       <div className="grid grid-cols-2 gap-3">

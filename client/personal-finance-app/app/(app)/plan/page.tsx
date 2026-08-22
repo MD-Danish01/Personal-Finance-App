@@ -2,6 +2,7 @@ import { getPlan } from "@/lib/api";
 import { formatINR } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
+import { ProfileAvatar } from "@/components/ui/ProfileAvatar";
 import { PlanBreakdownRow } from "@/components/screens/PlanBreakdownRow";
 import { InsightCard } from "@/components/screens/InsightCard";
 
@@ -12,9 +13,12 @@ export default async function PlanPage() {
     <div className="px-5 pb-4">
       <header className="flex items-center justify-between px-1 py-5">
         <h1 className="text-[22px] font-bold tracking-tight">My Plan</h1>
-        <button aria-label="Adjust plan" className="rounded-full p-1">
-          <Icon name="swap" size={21} />
-        </button>
+        <div className="flex items-center gap-4">
+          <button aria-label="Adjust plan" className="rounded-full p-1">
+            <Icon name="swap" size={21} />
+          </button>
+          <ProfileAvatar name="Aarav" />
+        </div>
       </header>
 
       <Card className="flex items-center gap-3 p-4">

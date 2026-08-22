@@ -2,6 +2,7 @@ import { getRecentTransactions, getSpendingByCategory } from "@/lib/api";
 import { formatINR } from "@/lib/format";
 import { CategoryDot } from "@/components/ui/CategoryDot";
 import { Icon } from "@/components/ui/Icon";
+import { ProfileAvatar } from "@/components/ui/ProfileAvatar";
 import { SpendingDonut } from "@/components/screens/SpendingDonut";
 import { TransactionList } from "@/components/screens/TransactionList";
 
@@ -30,6 +31,7 @@ export default async function MoneyPage() {
           <button aria-label="Filter" className="rounded-full p-1">
             <Icon name="filter" size={21} />
           </button>
+          <ProfileAvatar name="Aarav" />
         </div>
       </header>
 

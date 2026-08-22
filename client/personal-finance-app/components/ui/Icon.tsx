@@ -12,6 +12,7 @@ import {
   Filter,
   Home,
   Laptop,
+  LogOut,
   Menu,
   MoveUpRight,
   Plus,
@@ -26,6 +27,7 @@ import {
   Target,
   TrendingUp,
   Utensils,
+  User,
   Wallet,
   WalletCards,
   Wifi,
@@ -66,7 +68,9 @@ export type IconName =
   | "palm"
   | "signal"
   | "wifi"
-  | "battery";
+  | "battery"
+  | "user"
+  | "log-out";
 
 interface IconProps {
   name: IconName;
@@ -111,6 +115,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   signal: Signal,
   wifi: Wifi,
   battery: Battery,
+  user: User,
+  "log-out": LogOut,
 };
 
 export function Icon({ name, size = 20, className, strokeWidth = 1.8 }: IconProps) {

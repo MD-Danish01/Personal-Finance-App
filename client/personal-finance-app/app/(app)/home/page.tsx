@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getDashboard } from "@/lib/api";
 import { formatINR } from "@/lib/format";
 import { Icon } from "@/components/ui/Icon";
+import { ProfileAvatar } from "@/components/ui/ProfileAvatar";
 import { SafeToSpendCard } from "@/components/screens/SafeToSpendCard";
 import { MonthOverviewList } from "@/components/screens/MonthOverviewList";
 import { GoalProgressCard } from "@/components/screens/GoalProgressCard";
@@ -9,16 +10,20 @@ import { InsightCard } from "@/components/screens/InsightCard";
 
 export default async function HomePage() {
   const dashboard = await getDashboard();
+  const userName = dashboard.greetingName;
 
   return (
     <div className="px-5 pb-4">
       <header className="flex items-center justify-between px-1 py-5">
         <h1 className="text-[19px] font-semibold tracking-tight">
-          Good morning, {dashboard.greetingName} <span aria-hidden>👋</span>
+          Good morning, {userName} <span aria-hidden>👋</span>
         </h1>
-        <button aria-label="Notifications" className="rounded-full p-1">
-          <Icon name="bell" size={21} />
-        </button>
+        <div className="flex items-center gap-4">
+          <button aria-label="Notifications" className="rounded-full p-1">
+            <Icon name="bell" size={21} />
+          </button>
+          <ProfileAvatar name={userName} />
+        </div>
       </header>
 
       <SafeToSpendCard

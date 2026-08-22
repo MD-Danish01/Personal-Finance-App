@@ -2,6 +2,7 @@ import { getGoals } from "@/lib/api";
 import { formatINR, formatPercent } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
+import { ProfileAvatar } from "@/components/ui/ProfileAvatar";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 
 export default async function GoalsPage() {
@@ -11,9 +12,12 @@ export default async function GoalsPage() {
     <div className="px-5 pb-4">
       <header className="flex items-center justify-between px-1 py-5">
         <h1 className="text-[22px] font-bold tracking-tight">My Goals</h1>
-        <button aria-label="Add goal" className="rounded-full p-1">
-          <Icon name="plus" size={23} />
-        </button>
+        <div className="flex items-center gap-4">
+          <button aria-label="Add goal" className="rounded-full p-1">
+            <Icon name="plus" size={23} />
+          </button>
+          <ProfileAvatar name="Aarav" />
+        </div>
       </header>
 
       <div className="space-y-3">

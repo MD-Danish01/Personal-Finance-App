@@ -3,7 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import { createRequireAuth } from "./auth/require-auth.js";
 
-export function createApp(config) {
+ function createApp(config) {
   const app = express();
   const requireAuth = createRequireAuth(config);
 
@@ -27,3 +27,5 @@ export function createApp(config) {
 
   return app;
 }
+
+export { createApp };

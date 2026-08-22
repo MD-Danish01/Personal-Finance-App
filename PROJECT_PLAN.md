@@ -33,17 +33,14 @@ decides what a user is "allowed" to do.
 | Backend | **Express.js** | Separate service; owns all business logic and the financial engine |
 | Database | **PostgreSQL via Supabase** | Hosted Postgres only — not using Supabase's PostgREST/client for business queries |
 | ORM | **Drizzle** | Schema-as-code + migrations |
-| Auth | **Supabase Auth** | JWT-based; verified in Express via JWKS, not via Supabase SDK calls per request |
+| Auth | **Auth.js (next-auth) v5** | Google OAuth; JWT verified in Express via shared AUTH_SECRET |
 | Bank data | **Setu AA Gateway v2** | Sandbox first; see Section 8 |
 
 ### Why these choices (for the record)
 
-- **Supabase Auth over Clerk/custom OAuth:** same project as the DB, native UUID
-  identity, one less vendor to integrate under hackathon time pressure. Clerk has
-  nicer polish but adds a second identity system to sync.
+- **Auth.js (next-auth) v5 over Supabase Auth / Clerk:** Google OAuth avoids email-delivery limits of free Supabase tier. Single JWT secret shared with Express for backend verification. No external auth API calls per request.
 - **Drizzle over raw SQL/other ORMs:** schema-as-code migrations keep the DB
-  reproducible, which matters since `auth.users` (Supabase-managed) must stay
-  untouched by our migrations — we only ever reference it by UUID foreign key.
+  reproducible, which matters since core tables reference user IDs from Auth.js
 - **Capacitor remote-URL mode over static export:** preserves full Next.js SSR
   and API routes. Trade-off: the app has no offline capability and needs a live
   network connection at all times — plan demo-day connectivity accordingly.
@@ -64,7 +61,7 @@ decides what a user is "allowed" to do.
     │                  │                  │
     ▼                  ▼                  ▼
 
-Supabase Auth Finance Services AI / Insights
+Auth.js (JWT verify) Finance Services AI / Insights
 (JWT verify only) │
 ┌───────┼───────┐
 ▼ ▼ ▼
@@ -117,29 +114,23 @@ CRUD / Data Layer + Financial Business Logic + AI Explanation Layer
 
 ---
 
-## 5. Auth (Supabase Auth)
+## 5. Auth (Auth.js / next-auth v5)
 
-- Supabase manages `auth.users` — our schema never redefines or migrates it,
-  only references its UUID as a foreign key.
-- Express verifies JWTs locally via JWKS (or the shared HS256 secret,
-  depending on project signing config) — no per-request call to Supabase's
-  Auth API.
-- `payload.sub` (the Supabase user UUID) becomes `req.userId` for all
-  downstream queries.
+- **Auth.js (next-auth) v5** with Google OAuth provider.
+- Session stored in JWT cookies, verified by Next.js proxy.
+- Express verifies incoming Bearer tokens using `jose` and the shared `AUTH_SECRET`.
+- `req.user` contains `{ id, email, name }` from the decoded JWT.
 
 ```typescript
-import { jwtVerify, createRemoteJWKSet } from 'jose';
-
-const JWKS = createRemoteJWKSet(
-  new URL(`${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
-);
+import { createSecretKey, jwtVerify } from 'jose';
 
 export async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Missing token' });
   try {
-    const { payload } = await jwtVerify(token, JWKS);
-    req.userId = payload.sub;
+    const secret = createSecretKey(new TextEncoder().encode(config.authSecret));
+    const { payload } = await jwtVerify(token, secret);
+    req.user = { id: payload.sub, email: payload.email };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid token' });
@@ -166,7 +157,7 @@ connected_financial_accounts, setu_consents, setu_data_sessions,
 setu_webhook_events
 
 
-`user_id` columns reference the Supabase `auth.users` UUID directly — no
+`user_id` columns reference Auth.js user IDs — no
 local `users` table duplicating Supabase's.
 
 ---
@@ -289,17 +280,14 @@ decides what a user is "allowed" to do.
 | Backend | **Express.js** | Separate service; owns all business logic and the financial engine |
 | Database | **PostgreSQL via Supabase** | Hosted Postgres only — not using Supabase's PostgREST/client for business queries |
 | ORM | **Drizzle** | Schema-as-code + migrations |
-| Auth | **Supabase Auth** | JWT-based; verified in Express via JWKS, not via Supabase SDK calls per request |
+| Auth | **Auth.js (next-auth) v5** | Google OAuth; JWT verified in Express via shared AUTH_SECRET |
 | Bank data | **Setu AA Gateway v2** | Sandbox first; see Section 8 |
 
 ### Why these choices (for the record)
 
-- **Supabase Auth over Clerk/custom OAuth:** same project as the DB, native UUID
-  identity, one less vendor to integrate under hackathon time pressure. Clerk has
-  nicer polish but adds a second identity system to sync.
+- **Auth.js (next-auth) v5 over Supabase Auth / Clerk:** Google OAuth avoids email-delivery limits of free Supabase tier. Single JWT secret shared with Express for backend verification. No external auth API calls per request.
 - **Drizzle over raw SQL/other ORMs:** schema-as-code migrations keep the DB
-  reproducible, which matters since `auth.users` (Supabase-managed) must stay
-  untouched by our migrations — we only ever reference it by UUID foreign key.
+  reproducible, which matters since core tables reference user IDs from Auth.js
 - **Capacitor remote-URL mode over static export:** preserves full Next.js SSR
   and API routes. Trade-off: the app has no offline capability and needs a live
   network connection at all times — plan demo-day connectivity accordingly.
@@ -320,7 +308,7 @@ decides what a user is "allowed" to do.
     │                  │                  │
     ▼                  ▼                  ▼
 
-Supabase Auth Finance Services AI / Insights
+Auth.js (JWT verify) Finance Services AI / Insights
 (JWT verify only) │
 ┌───────┼───────┐
 ▼ ▼ ▼
@@ -373,29 +361,23 @@ CRUD / Data Layer + Financial Business Logic + AI Explanation Layer
 
 ---
 
-## 5. Auth (Supabase Auth)
+## 5. Auth (Auth.js / next-auth v5)
 
-- Supabase manages `auth.users` — our schema never redefines or migrates it,
-  only references its UUID as a foreign key.
-- Express verifies JWTs locally via JWKS (or the shared HS256 secret,
-  depending on project signing config) — no per-request call to Supabase's
-  Auth API.
-- `payload.sub` (the Supabase user UUID) becomes `req.userId` for all
-  downstream queries.
+- **Auth.js (next-auth) v5** with Google OAuth provider.
+- Session stored in JWT cookies, verified by Next.js proxy.
+- Express verifies incoming Bearer tokens using `jose` and the shared `AUTH_SECRET`.
+- `req.user` contains `{ id, email, name }` from the decoded JWT.
 
 ```typescript
-import { jwtVerify, createRemoteJWKSet } from 'jose';
-
-const JWKS = createRemoteJWKSet(
-  new URL(`${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`)
-);
+import { createSecretKey, jwtVerify } from 'jose';
 
 export async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Missing token' });
   try {
-    const { payload } = await jwtVerify(token, JWKS);
-    req.userId = payload.sub;
+    const secret = createSecretKey(new TextEncoder().encode(config.authSecret));
+    const { payload } = await jwtVerify(token, secret);
+    req.user = { id: payload.sub, email: payload.email };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid token' });
@@ -422,7 +404,7 @@ connected_financial_accounts, setu_consents, setu_data_sessions,
 setu_webhook_events
 
 
-`user_id` columns reference the Supabase `auth.users` UUID directly — no
+`user_id` columns reference Auth.js user IDs — no
 local `users` table duplicating Supabase's.
 
 ---

@@ -122,4 +122,5 @@ export interface InsightsBundle {
 export interface User {
   id: string;
   name: string;
+  email?: string;
 }

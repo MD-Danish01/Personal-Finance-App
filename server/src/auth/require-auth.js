@@ -1,7 +1,7 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { jwtVerify } from "jose";
 
 export function createRequireAuth(config) {
-  const jwks = createRemoteJWKSet(new URL(config.jwksUrl));
+  const secret = new TextEncoder().encode(config.authSecret);
 
   return async function requireAuth(req, res, next) {
     const authorization = req.get("authorization");
@@ -14,10 +14,7 @@ export function createRequireAuth(config) {
     }
 
     try {
-      const { payload } = await jwtVerify(token, jwks, {
-        issuer: config.jwtIssuer,
-        audience: "authenticated",
-      });
+      const { payload } = await jwtVerify(token, secret);
 
       if (typeof payload.sub !== "string") {
         return res.status(401).json({ error: "Token has no user id" });
@@ -25,7 +22,10 @@ export function createRequireAuth(config) {
 
       req.user = {
         id: payload.sub,
-        email: typeof payload.email === "string" ? payload.email : undefined,
+        email:
+          typeof payload.email === "string" ? payload.email : undefined,
+        name:
+          typeof payload.name === "string" ? payload.name : undefined,
       };
       return next();
     } catch {

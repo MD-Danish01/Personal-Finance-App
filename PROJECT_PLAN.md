@@ -30,15 +30,16 @@ decides what a user is "allowed" to do.
 | Frontend framework | **Next.js** | Full SSR/API routes usable — not statically exported |
 | Mobile packaging | **Capacitor** | Remote-URL mode: WebView points at the live hosted deployment rather than a bundled static build. Confirmed working pattern from a separate prior project — dynamic routes and Next.js API routes function correctly in this mode. |
 | Frontend hosting | **Vercel** | |
-| Backend | **Express.js** | Separate service; owns all business logic and the financial engine |
+| Backend | **Next.js API Routes (Route Handlers)** | Same Vercel deployment; owns all business logic and the financial engine |
 | Database | **PostgreSQL via Supabase** | Hosted Postgres only — not using Supabase's PostgREST/client for business queries |
 | ORM | **Drizzle** | Schema-as-code + migrations |
-| Auth | **Auth.js (next-auth) v5** | Google OAuth; JWT verified in Express via shared AUTH_SECRET |
+| Auth | **Auth.js (next-auth) v5** | Google OAuth; session checked directly in Route Handlers via `auth()` |
 | Bank data | **Setu AA Gateway v2** | Sandbox first; see Section 8 |
 
 ### Why these choices (for the record)
 
-- **Auth.js (next-auth) v5 over Supabase Auth / Clerk:** Google OAuth avoids email-delivery limits of free Supabase tier. Single JWT secret shared with Express for backend verification. No external auth API calls per request.
+- **Auth.js (next-auth) v5 over Supabase Auth / Clerk:** Google OAuth avoids email-delivery limits of free Supabase tier. Sessions are checked directly in Route Handlers via `auth()` — no external auth API calls per request.
+- **Next.js API Routes over separate Express service:** one deployment, no CORS, no JWT bridge between services. Trade-off: serverless cold starts and execution time limits — acceptable for a request/response financial engine with no long-running jobs.
 - **Drizzle over raw SQL/other ORMs:** schema-as-code migrations keep the DB
   reproducible, which matters since core tables reference user IDs from Auth.js
 - **Capacitor remote-URL mode over static export:** preserves full Next.js SSR
@@ -49,34 +50,34 @@ decides what a user is "allowed" to do.
 
 ## 3. High-Level Architecture
                 Next.js (Vercel, SSR)
-                       │
+                        │
             (Capacitor WebView loads
              the live hosted URL —
              not a bundled build)
-                       │
-                       ▼
-                Express REST API
-                       │
-    ┌──────────────────┼──────────────────┐
-    │                  │                  │
-    ▼                  ▼                  ▼
+                        │
+                        ▼
+        Next.js API Routes (Route Handlers)
+                        │
+     ┌──────────────────┼──────────────────┐
+     │                  │                  │
+     ▼                  ▼                  ▼
 
-Auth.js (JWT verify) Finance Services AI / Insights
-(JWT verify only) │
-┌───────┼───────┐
-▼ ▼ ▼
-Plan Transaction Goals
-Engine Service Service
-│ │ │
-└───────┼────────┘
-▼
-Financial Engine
-(Safe-to-Spend, Plan vs
-Actual, Warnings, Recovery,
-Simulation — all deterministic)
-│
-▼
-Postgres (Supabase) via Drizzle
+ Auth.js (session)   Finance Services   AI / Insights
+                      │
+              ┌───────┼───────┐
+              ▼       ▼       ▼
+           Plan  Transaction Goals
+          Engine   Service   Service
+              │       │       │
+              └───────┼───────┘
+                      ▼
+              Financial Engine
+              (Safe-to-Spend, Plan vs
+              Actual, Warnings, Recovery,
+              Simulation — all deterministic)
+                      │
+                      ▼
+        Postgres (Supabase) via Drizzle
 
 
 ### Architectural separation (non-negotiable)
@@ -118,23 +119,20 @@ CRUD / Data Layer + Financial Business Logic + AI Explanation Layer
 
 - **Auth.js (next-auth) v5** with Google OAuth provider.
 - Session stored in JWT cookies, verified by Next.js proxy.
-- Express verifies incoming Bearer tokens using `jose` and the shared `AUTH_SECRET`.
-- `req.user` contains `{ id, email, name }` from the decoded JWT.
+- Route Handlers call `auth()` directly to get the session — no Bearer-token
+  bridge needed since frontend and API share one deployment.
+- `session.user` contains `{ id, email, name }`.
 
 ```typescript
-import { createSecretKey, jwtVerify } from 'jose';
+import { auth } from "@/auth";
 
-export async function requireAuth(req, res, next) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Missing token' });
-  try {
-    const secret = createSecretKey(new TextEncoder().encode(config.authSecret));
-    const { payload } = await jwtVerify(token, secret);
-    req.user = { id: payload.sub, email: payload.email };
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const userId = session.user.id;
+  // ... handler logic
 }
 ```
 
@@ -146,7 +144,7 @@ Two connection strings, used for different purposes:
 
 ```env
 DATABASE_URL=postgres://...:5432/postgres                        # direct — Drizzle Kit migrations
-DATABASE_URL_POOLED=postgres://...:6543/postgres?pgbouncer=true  # pooled — Express runtime queries
+DATABASE_URL_POOLED=postgres://...:6543/postgres?pgbouncer=true  # pooled — Route Handler runtime queries
 ```
 
 Core tables (full modeling is the next step in this project):
@@ -165,7 +163,7 @@ local `users` table duplicating Supabase's.
 ## 7. MVP Scope
 
 ### In scope
-1. Auth (Supabase)
+1. Auth (Auth.js / Google OAuth)
 2. Financial profile / income setup
 3. Essential expenses, savings target, enjoyment budget, emergency fund, buffer
 4. Personalized plan generation (recommend → user edits → active)
@@ -277,15 +275,16 @@ decides what a user is "allowed" to do.
 | Frontend framework | **Next.js** | Full SSR/API routes usable — not statically exported |
 | Mobile packaging | **Capacitor** | Remote-URL mode: WebView points at the live hosted deployment rather than a bundled static build. Confirmed working pattern from a separate prior project — dynamic routes and Next.js API routes function correctly in this mode. |
 | Frontend hosting | **Vercel** | |
-| Backend | **Express.js** | Separate service; owns all business logic and the financial engine |
+| Backend | **Next.js API Routes (Route Handlers)** | Same Vercel deployment; owns all business logic and the financial engine |
 | Database | **PostgreSQL via Supabase** | Hosted Postgres only — not using Supabase's PostgREST/client for business queries |
 | ORM | **Drizzle** | Schema-as-code + migrations |
-| Auth | **Auth.js (next-auth) v5** | Google OAuth; JWT verified in Express via shared AUTH_SECRET |
+| Auth | **Auth.js (next-auth) v5** | Google OAuth; session checked directly in Route Handlers via `auth()` |
 | Bank data | **Setu AA Gateway v2** | Sandbox first; see Section 8 |
 
 ### Why these choices (for the record)
 
-- **Auth.js (next-auth) v5 over Supabase Auth / Clerk:** Google OAuth avoids email-delivery limits of free Supabase tier. Single JWT secret shared with Express for backend verification. No external auth API calls per request.
+- **Auth.js (next-auth) v5 over Supabase Auth / Clerk:** Google OAuth avoids email-delivery limits of free Supabase tier. Sessions are checked directly in Route Handlers via `auth()` — no external auth API calls per request.
+- **Next.js API Routes over separate Express service:** one deployment, no CORS, no JWT bridge between services. Trade-off: serverless cold starts and execution time limits — acceptable for a request/response financial engine with no long-running jobs.
 - **Drizzle over raw SQL/other ORMs:** schema-as-code migrations keep the DB
   reproducible, which matters since core tables reference user IDs from Auth.js
 - **Capacitor remote-URL mode over static export:** preserves full Next.js SSR
@@ -296,34 +295,34 @@ decides what a user is "allowed" to do.
 
 ## 3. High-Level Architecture
                 Next.js (Vercel, SSR)
-                       │
+                        │
             (Capacitor WebView loads
              the live hosted URL —
              not a bundled build)
-                       │
-                       ▼
-                Express REST API
-                       │
-    ┌──────────────────┼──────────────────┐
-    │                  │                  │
-    ▼                  ▼                  ▼
+                        │
+                        ▼
+        Next.js API Routes (Route Handlers)
+                        │
+     ┌──────────────────┼──────────────────┐
+     │                  │                  │
+     ▼                  ▼                  ▼
 
-Auth.js (JWT verify) Finance Services AI / Insights
-(JWT verify only) │
-┌───────┼───────┐
-▼ ▼ ▼
-Plan Transaction Goals
-Engine Service Service
-│ │ │
-└───────┼────────┘
-▼
-Financial Engine
-(Safe-to-Spend, Plan vs
-Actual, Warnings, Recovery,
-Simulation — all deterministic)
-│
-▼
-Postgres (Supabase) via Drizzle
+ Auth.js (session)   Finance Services   AI / Insights
+                      │
+              ┌───────┼───────┐
+              ▼       ▼       ▼
+           Plan  Transaction Goals
+          Engine   Service   Service
+              │       │       │
+              └───────┼───────┘
+                      ▼
+              Financial Engine
+              (Safe-to-Spend, Plan vs
+              Actual, Warnings, Recovery,
+              Simulation — all deterministic)
+                      │
+                      ▼
+        Postgres (Supabase) via Drizzle
 
 
 ### Architectural separation (non-negotiable)
@@ -365,23 +364,20 @@ CRUD / Data Layer + Financial Business Logic + AI Explanation Layer
 
 - **Auth.js (next-auth) v5** with Google OAuth provider.
 - Session stored in JWT cookies, verified by Next.js proxy.
-- Express verifies incoming Bearer tokens using `jose` and the shared `AUTH_SECRET`.
-- `req.user` contains `{ id, email, name }` from the decoded JWT.
+- Route Handlers call `auth()` directly to get the session — no Bearer-token
+  bridge needed since frontend and API share one deployment.
+- `session.user` contains `{ id, email, name }`.
 
 ```typescript
-import { createSecretKey, jwtVerify } from 'jose';
+import { auth } from "@/auth";
 
-export async function requireAuth(req, res, next) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Missing token' });
-  try {
-    const secret = createSecretKey(new TextEncoder().encode(config.authSecret));
-    const { payload } = await jwtVerify(token, secret);
-    req.user = { id: payload.sub, email: payload.email };
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const userId = session.user.id;
+  // ... handler logic
 }
 ```
 
@@ -393,7 +389,7 @@ Two connection strings, used for different purposes:
 
 ```env
 DATABASE_URL=postgres://...:5432/postgres                        # direct — Drizzle Kit migrations
-DATABASE_URL_POOLED=postgres://...:6543/postgres?pgbouncer=true  # pooled — Express runtime queries
+DATABASE_URL_POOLED=postgres://...:6543/postgres?pgbouncer=true  # pooled — Route Handler runtime queries
 ```
 
 Core tables (full modeling is the next step in this project):
@@ -412,7 +408,7 @@ local `users` table duplicating Supabase's.
 ## 7. MVP Scope
 
 ### In scope
-1. Auth (Supabase)
+1. Auth (Auth.js / Google OAuth)
 2. Financial profile / income setup
 3. Essential expenses, savings target, enjoyment budget, emergency fund, buffer
 4. Personalized plan generation (recommend → user edits → active)

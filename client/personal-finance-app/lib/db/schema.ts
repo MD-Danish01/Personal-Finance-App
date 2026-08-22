@@ -1,0 +1,338 @@
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  integer,
+  boolean,
+  timestamp,
+  date,
+  jsonb,
+  uniqueIndex,
+  index,
+} from "drizzle-orm/pg-core";
+
+/**
+ * Money is stored as integer paise (1 INR = 100 paise) so all financial
+ * math stays exact and deterministic — never float.
+ *
+ * user_id columns hold Auth.js (next-auth v5) user IDs from Google OAuth.
+ * There is intentionally no local users table.
+ */
+
+// ---------- Enums ----------
+
+export const planStatusEnum = pgEnum("plan_status", [
+  "draft",
+  "recommended",
+  "active",
+]);
+
+export const allocationKeyEnum = pgEnum("allocation_key", [
+  "essentials",
+  "enjoyment",
+  "emergency",
+  "future_savings",
+  "long_term_wealth",
+  "buffer",
+]);
+
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  "expense",
+  "income",
+]);
+
+export const transactionCategoryEnum = pgEnum("transaction_category", [
+  "Food",
+  "Transport",
+  "Shopping",
+  "Entertainment",
+  "Bills",
+  "Others",
+]);
+
+export const transactionSourceEnum = pgEnum("transaction_source", [
+  "MANUAL",
+  "ACCOUNT_AGGREGATOR",
+]);
+
+export const goalStatusEnum = pgEnum("goal_status", [
+  "on_track",
+  "at_risk",
+  "completed",
+]);
+
+export const insightToneEnum = pgEnum("insight_tone", [
+  "positive",
+  "warning",
+  "info",
+]);
+
+export const consentStatusEnum = pgEnum("consent_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "REVOKED",
+  "EXPIRED",
+]);
+
+export const dataSessionStatusEnum = pgEnum("data_session_status", [
+  "PENDING",
+  "COMPLETED",
+  "EXPIRED",
+  "FAILED",
+]);
+
+// ---------- Core finance tables ----------
+
+export const financialProfiles = pgTable("financial_profiles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  monthlyIncome: integer("monthly_income").notNull(), // paise
+  currency: text("currency").notNull().default("INR"),
+  essentialsPercent: integer("essentials_percent").notNull().default(50),
+  savingsPercent: integer("savings_percent").notNull().default(20),
+  enjoymentPercent: integer("enjoyment_percent").notNull().default(20),
+  bufferPercent: integer("buffer_percent").notNull().default(10),
+  emergencyMonthsTarget: integer("emergency_months_target")
+    .notNull()
+    .default(6),
+  onboardingCompleted: boolean("onboarding_completed")
+    .notNull()
+    .default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const plans = pgTable(
+  "plans",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    month: integer("month").notNull(), // 1-12
+    year: integer("year").notNull(),
+    monthlyIncome: integer("monthly_income").notNull(), // paise, snapshot at plan time
+    status: planStatusEnum("status").notNull().default("draft"),
+    whyThisPlan: text("why_this_plan"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("plans_user_month_year_idx").on(t.userId, t.month, t.year),
+    index("plans_user_id_idx").on(t.userId),
+  ],
+);
+
+export const planAllocations = pgTable(
+  "plan_allocations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => plans.id, { onDelete: "cascade" }),
+    key: allocationKeyEnum("key").notNull(),
+    amount: integer("amount").notNull(), // paise
+    percent: integer("percent").notNull(), // 0-100
+  },
+  (t) => [index("plan_allocations_plan_id_idx").on(t.planId)],
+);
+
+export const transactions = pgTable(
+  "transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    amount: integer("amount").notNull(), // paise
+    type: transactionTypeEnum("type").notNull(),
+    category: transactionCategoryEnum("category").notNull(),
+    merchant: text("merchant").notNull().default(""),
+    description: text("description"),
+    transactionDate: date("transaction_date").notNull(),
+    source: transactionSourceEnum("source").notNull().default("MANUAL"),
+    setuTransactionId: text("setu_transaction_id"), // dedupe key for AA-sourced rows
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("transactions_user_date_idx").on(t.userId, t.transactionDate),
+    uniqueIndex("transactions_setu_id_idx").on(t.setuTransactionId),
+  ],
+);
+
+export const goals = pgTable(
+  "goals",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    icon: text("icon").notNull().default("target"),
+    targetAmount: integer("target_amount").notNull(), // paise
+    currentAmount: integer("current_amount").notNull().default(0), // paise
+    deadline: date("deadline"),
+    monthlyTarget: integer("monthly_target").notNull().default(0), // paise
+    status: goalStatusEnum("status").notNull().default("on_track"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("goals_user_id_idx").on(t.userId)],
+);
+
+export const goalContributions = pgTable(
+  "goal_contributions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    goalId: uuid("goal_id")
+      .notNull()
+      .references(() => goals.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(), // paise
+    note: text("note"),
+    contributedAt: timestamp("contributed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("goal_contributions_goal_id_idx").on(t.goalId)],
+);
+
+export const limits = pgTable(
+  "limits",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    category: transactionCategoryEnum("category").notNull(),
+    monthlyLimit: integer("monthly_limit").notNull(), // paise
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("limits_user_category_idx").on(t.userId, t.category)],
+);
+
+export const emergencyFunds = pgTable("emergency_funds", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  targetAmount: integer("target_amount").notNull(), // paise
+  currentAmount: integer("current_amount").notNull().default(0), // paise
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    type: text("type").notNull(), // e.g. "limit_warning", "plan_deviation"
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    read: boolean("read").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("notifications_user_id_idx").on(t.userId, t.read)],
+);
+
+export const insights = pgTable(
+  "insights",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    tone: insightToneEnum("tone").notNull().default("info"),
+    generatedAt: timestamp("generated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("insights_user_id_idx").on(t.userId)],
+);
+
+// ---------- Setu AA tables ----------
+
+export const connectedFinancialAccounts = pgTable(
+  "connected_financial_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    fipId: text("fip_id").notNull(), // e.g. "HDFC", "ICICI" per Setu registry
+    fipName: text("fip_name").notNull(),
+    maskedAccountNumber: text("masked_account_number"),
+    accountType: text("account_type").notNull().default("DEPOSIT"),
+    linkedAt: timestamp("linked_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("cfa_user_id_idx").on(t.userId)],
+);
+
+export const setuConsents = pgTable(
+  "setu_consents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    consentId: text("consent_id").notNull().unique(), // Setu's consent handle
+    status: consentStatusEnum("status").notNull().default("PENDING"),
+    consentUrl: text("consent_url"), // hosted consent screen URL
+    purposeCode: text("purpose_code"),
+    dataRangeFrom: timestamp("data_range_from", { withTimezone: true }),
+    dataRangeTo: timestamp("data_range_to", { withTimezone: true }),
+    consentExpiry: timestamp("consent_expiry", { withTimezone: true }),
+    rawPayload: jsonb("raw_payload"), // full Setu response for audit
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("setu_consents_user_id_idx").on(t.userId)],
+);
+
+export const setuDataSessions = pgTable(
+  "setu_data_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    consentId: text("consent_id")
+      .notNull()
+      .references(() => setuConsents.consentId),
+    sessionId: text("session_id").notNull().unique(), // Setu's session id
+    status: dataSessionStatusEnum("status").notNull().default("PENDING"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("setu_data_sessions_consent_idx").on(t.consentId)],
+);
+
+// Idempotency dedupe for Setu webhooks — eventId uniqueness guarantees
+// duplicate deliveries never create duplicate side effects.
+export const setuWebhookEvents = pgTable("setu_webhook_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: text("event_id").notNull().unique(),
+  eventType: text("event_type").notNull(), // e.g. "CONSENT_STATUS_UPDATE"
+  payload: jsonb("payload").notNull(),
+  processed: boolean("processed").notNull().default(false),
+  receivedAt: timestamp("received_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

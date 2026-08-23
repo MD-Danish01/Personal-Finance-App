@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { ConnectBankCard } from "@/components/ui/ConnectBankCard";
+import { EditPlanModal } from "@/components/ui/EditPlanModal";
 import { PlanBreakdownRow } from "@/components/screens/PlanBreakdownRow";
 import { InsightCard } from "@/components/screens/InsightCard";
 import type { Plan as PlanType } from "@/lib/types";
@@ -15,17 +16,18 @@ import type { Plan as PlanType } from "@/lib/types";
 export default function PlanPage() {
   const [plan, setPlan] = useState<PlanType | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+
+  function loadPlan() {
+    setError(null);
+    getPlan().then(setPlan).catch((e) => setError(e.response?.data?.error ?? "Failed to load plan"));
+  }
 
   useEffect(() => {
-    getPlan()
-      .then(setPlan)
-      .catch((e) => {
-        if (e.response?.status === 404) {
-          setError("Set your monthly income to generate a plan.");
-        } else {
-          setError(e.response?.data?.error ?? "Failed to load plan");
-        }
-      });
+    getPlan().then(setPlan).catch((e) => {
+      if (e.response?.status === 404) setError("Set your monthly income to generate a plan.");
+      else setError(e.response?.data?.error ?? "Failed to load plan");
+    });
   }, []);
 
   if (error) {
@@ -66,13 +68,15 @@ export default function PlanPage() {
           <Icon name="wallet" size={19} />
         </span>
         <span className="flex-1 text-sm font-medium">Monthly income</span>
-        <span className="text-sm font-bold">{formatINR(plan.monthlyIncome)}</span>
+        <span className="text-sm font-bold">{formatINR(plan.monthlyIncome / 100)}</span>
       </Card>
 
       <section className="mt-7">
         <div className="mb-3 flex items-center justify-between px-1">
           <h2 className="text-sm font-semibold">Plan breakdown</h2>
-          <button className="text-xs font-medium text-brand-blue">Edit plan</button>
+          <button onClick={() => setEditing(true)} className="rounded-md px-2 py-1 text-xs font-medium text-brand-blue hover:bg-brand-blue-soft focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
+            Edit plan
+          </button>
         </div>
         <Card className="divide-y divide-border/60 overflow-hidden">
           {plan.allocations.map((allocation) => (
@@ -95,6 +99,7 @@ export default function PlanPage() {
       </section>
 
       <ConnectBankCard />
+      <EditPlanModal open={editing} allocations={plan.allocations} onClose={() => setEditing(false)} onSaved={loadPlan} />
     </div>
   );
 }
@@ -104,7 +109,7 @@ function Header() {
     <header className="flex items-center justify-between px-1 py-5">
       <h1 className="text-[22px] font-bold tracking-tight">My Plan</h1>
       <div className="flex items-center gap-4">
-        <button aria-label="Adjust plan" className="rounded-full p-1">
+        <button aria-label="Adjust plan" className="rounded-full p-1 hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
           <Icon name="swap" size={21} />
         </button>
         <UserAvatar />

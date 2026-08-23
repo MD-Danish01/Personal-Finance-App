@@ -9,6 +9,7 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { SpendingDonut } from "@/components/screens/SpendingDonut";
 import { TransactionList } from "@/components/screens/TransactionList";
 import type { RecentTransactions, SpendingSummary } from "@/lib/types";
+import { ComingSoonButton } from "@/components/ui/ComingSoonDialog";
 
 const DOT_COLORS: Record<string, string> = {
   Food: "bg-brand-green",
@@ -58,7 +59,7 @@ export default function MoneyPage() {
     <div className="px-5 pb-4">
       <Header />
 
-      <button className="flex items-center gap-2 py-1 text-sm font-medium">
+      <button type="button" aria-label="Change month" className="flex items-center gap-2 rounded-md py-1 text-sm font-medium hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
         {spending.monthLabel}
         <Icon name="chevron-down" size={16} />
       </button>
@@ -66,7 +67,7 @@ export default function MoneyPage() {
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between px-1">
           <h2 className="text-sm font-semibold">Spending by category</h2>
-          <button className="text-xs font-medium text-brand-blue">View all</button>
+          <ComingSoonButton label="View all" />
         </div>
         <div className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-card border border-border/60">
           <SpendingDonut data={spending.byCategory} total={spending.total} />
@@ -105,10 +106,10 @@ function Header() {
     <header className="flex items-center justify-between px-1 py-5">
       <h1 className="text-[22px] font-bold tracking-tight">Money</h1>
       <div className="flex items-center gap-4">
-        <button aria-label="Search" className="rounded-full p-1">
+        <button aria-label="Search" className="rounded-full p-1 hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
           <Icon name="search" size={22} />
         </button>
-        <button aria-label="Filter" className="rounded-full p-1">
+        <button aria-label="Filter" className="rounded-full p-1 hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
           <Icon name="filter" size={21} />
         </button>
         <UserAvatar />

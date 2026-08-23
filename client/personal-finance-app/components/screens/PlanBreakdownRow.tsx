@@ -3,6 +3,10 @@ import { Icon, type IconName } from "../ui/Icon";
 import { ProgressBar } from "../ui/ProgressBar";
 import { formatINR, formatPercent } from "@/lib/format";
 
+function formatPaise(paise: number): string {
+  return formatINR(paise / 100);
+}
+
 interface PlanBreakdownRowProps {
   allocation: PlanAllocation;
   totalIncome: number;
@@ -43,7 +47,7 @@ export function PlanBreakdownRow({
       </div>
       <div className="text-right">
         <div className="text-sm font-semibold text-foreground">
-          {formatINR(allocation.amount)}
+          {formatPaise(allocation.amount)}
         </div>
         <div className="text-xs text-muted">
           {formatPercent(allocation.percent)}

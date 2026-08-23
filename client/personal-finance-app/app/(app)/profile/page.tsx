@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Card } from "@/components/ui/Card";
 import { FinancialProfileCard } from "@/components/ui/FinancialProfileCard";
 import { handleSignOut } from "./actions";
+import { ComingSoonButton } from "@/components/ui/ComingSoonDialog";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -55,27 +56,33 @@ export default async function ProfilePage() {
           Account
         </h3>
         <Card className="space-y-3 p-4">
-          <button className="flex w-full items-center justify-between gap-3 p-2 text-left text-foreground rounded-lg hover:bg-muted transition-colors">
-            <div className="flex items-center gap-3">
-              <Icon name="user" size={20} />
-              <span className="font-medium">Personal information</span>
+          <ComingSoonButton>
+            <div className="flex w-full items-center justify-between gap-3 p-2 text-left text-foreground rounded-lg hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3">
+                <Icon name="user" size={20} />
+                <span className="font-medium">Personal information</span>
+              </div>
+              <Icon name="chevron-right" size={18} className="text-muted" />
             </div>
-            <Icon name="chevron-right" size={18} className="text-muted" />
-          </button>
-          <button className="flex w-full items-center justify-between gap-3 p-2 text-left text-foreground rounded-lg hover:bg-muted transition-colors">
-            <div className="flex items-center gap-3">
-              <Icon name="shield" size={20} />
-              <span className="font-medium">Security</span>
+          </ComingSoonButton>
+          <ComingSoonButton>
+            <div className="flex w-full items-center justify-between gap-3 p-2 text-left text-foreground rounded-lg hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3">
+                <Icon name="shield" size={20} />
+                <span className="font-medium">Security</span>
+              </div>
+              <Icon name="chevron-right" size={18} className="text-muted" />
             </div>
-            <Icon name="chevron-right" size={18} className="text-muted" />
-          </button>
-          <button className="flex w-full items-center justify-between gap-3 p-2 text-left text-foreground rounded-lg hover:bg-muted transition-colors">
-            <div className="flex items-center gap-3">
-              <Icon name="bell" size={20} />
-              <span className="font-medium">Notifications</span>
+          </ComingSoonButton>
+          <ComingSoonButton>
+            <div className="flex w-full items-center justify-between gap-3 p-2 text-left text-foreground rounded-lg hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3">
+                <Icon name="bell" size={20} />
+                <span className="font-medium">Notifications</span>
+              </div>
+              <Icon name="chevron-right" size={18} className="text-muted" />
             </div>
-            <Icon name="chevron-right" size={18} className="text-muted" />
-          </button>
+          </ComingSoonButton>
         </Card>
       </section>
 

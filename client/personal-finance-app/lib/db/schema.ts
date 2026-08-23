@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Money is stored as integer paise (1 INR = 100 paise) so all financial
@@ -35,6 +36,16 @@ export const allocationKeyEnum = pgEnum("allocation_key", [
   "future_savings",
   "long_term_wealth",
   "buffer",
+]);
+
+export const financialBucketEnum = pgEnum("financial_bucket", [
+  "essentials",
+  "enjoyment",
+  "emergency",
+  "future_savings",
+  "long_term_wealth",
+  "buffer",
+  "unknown",
 ]);
 
 export const transactionTypeEnum = pgEnum("transaction_type", [
@@ -128,6 +139,9 @@ export const plans = pgTable(
   (t) => [
     uniqueIndex("plans_user_month_year_idx").on(t.userId, t.month, t.year),
     index("plans_user_id_idx").on(t.userId),
+    uniqueIndex("plans_one_active_user_idx")
+      .on(t.userId)
+      .where(sql`${t.status} = 'active'`),
   ],
 );
 
@@ -153,6 +167,10 @@ export const transactions = pgTable(
     amount: integer("amount").notNull(), // paise
     type: transactionTypeEnum("type").notNull(),
     category: transactionCategoryEnum("category").notNull(),
+    financialBucket: financialBucketEnum("financial_bucket")
+      .notNull()
+      .default("unknown"),
+    setuAccountId: text("setu_account_id"),
     merchant: text("merchant").notNull().default(""),
     description: text("description"),
     transactionDate: date("transaction_date").notNull(),
@@ -164,7 +182,10 @@ export const transactions = pgTable(
   },
   (t) => [
     index("transactions_user_date_idx").on(t.userId, t.transactionDate),
-    uniqueIndex("transactions_setu_id_idx").on(t.setuTransactionId),
+    uniqueIndex("transactions_setu_account_transaction_idx").on(
+      t.setuAccountId,
+      t.setuTransactionId,
+    ),
   ],
 );
 
@@ -233,6 +254,22 @@ export const emergencyFunds = pgTable("emergency_funds", {
     .defaultNow(),
 });
 
+export const emergencyFundContributions = pgTable(
+  "emergency_fund_contributions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    emergencyFundId: uuid("emergency_fund_id")
+      .notNull()
+      .references(() => emergencyFunds.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(), // paise
+    note: text("note"),
+    contributedAt: timestamp("contributed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("emergency_fund_contributions_fund_idx").on(t.emergencyFundId)],
+);
+
 export const notifications = pgTable(
   "notifications",
   {
@@ -273,13 +310,18 @@ export const connectedFinancialAccounts = pgTable(
     userId: text("user_id").notNull(),
     fipId: text("fip_id").notNull(), // e.g. "HDFC", "ICICI" per Setu registry
     fipName: text("fip_name").notNull(),
+    setuConsentId: text("setu_consent_id"),
+    setuLinkRefNumber: text("setu_link_ref_number"),
     maskedAccountNumber: text("masked_account_number"),
     accountType: text("account_type").notNull().default("DEPOSIT"),
     linkedAt: timestamp("linked_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("cfa_user_id_idx").on(t.userId)],
+  (t) => [
+    index("cfa_user_id_idx").on(t.userId),
+    uniqueIndex("cfa_user_link_ref_idx").on(t.userId, t.setuLinkRefNumber),
+  ],
 );
 
 export const setuConsents = pgTable(

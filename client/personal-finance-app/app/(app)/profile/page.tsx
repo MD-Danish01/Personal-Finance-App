@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
+import Image from "next/image";
 import { Icon } from "@/components/ui/Icon";
 import { Card } from "@/components/ui/Card";
+import { FinancialProfileCard } from "@/components/ui/FinancialProfileCard";
 import { handleSignOut } from "./actions";
 
 export default async function ProfilePage() {
@@ -8,6 +10,7 @@ export default async function ProfilePage() {
   const user = session?.user;
   const name = user?.name ?? "User";
   const email = user?.email ?? "—";
+  const image = user?.image;
 
   return (
     <div className="px-5 pb-4">
@@ -16,9 +19,22 @@ export default async function ProfilePage() {
       </header>
 
       <Card className="flex items-center gap-3 p-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-blue text-white text-2xl font-bold">
-          {name.charAt(0).toUpperCase()}
-        </div>
+        {image ? (
+          <div className="relative h-14 w-14 overflow-hidden rounded-2xl">
+            <Image
+              src={image}
+              alt={name}
+              fill
+              sizes="56px"
+              className="object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-blue text-white text-2xl font-bold">
+            {name.charAt(0).toUpperCase()}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-semibold truncate">{name}</h2>
           <p className="mt-1 text-sm text-muted truncate">{email}</p>
@@ -30,18 +46,7 @@ export default async function ProfilePage() {
           Financial profile
         </h3>
         <Card className="space-y-3 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Monthly income</span>
-            <span className="text-sm font-bold">—</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Active plan</span>
-            <span className="text-sm font-semibold text-brand-green">—</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Savings goals</span>
-            <span className="text-sm font-semibold">—</span>
-          </div>
+          <FinancialProfileCard />
         </Card>
       </section>
 

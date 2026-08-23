@@ -1,11 +1,4 @@
-import {
-  mockDashboard,
-  mockGoals,
-  mockInsights,
-  mockPlan,
-  mockRecentTransactions,
-  mockSpending,
-} from "./mock-data";
+import { apiClient } from "./client";
 import type {
   DashboardSummary,
   Goal,
@@ -15,45 +8,37 @@ import type {
   SpendingSummary,
 } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-
-async function getJson<T>(path: string, fallback: T): Promise<T> {
-  if (!API_BASE) return fallback;
-  try {
-    const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
-    if (!res.ok) return fallback;
-    return (await res.json()) as T;
-  } catch {
-    return fallback;
-  }
-}
-
 export async function getDashboard(): Promise<DashboardSummary> {
-  return getJson<DashboardSummary>("/api/dashboard", mockDashboard);
+  const { data } = await apiClient.get<DashboardSummary>("/dashboard");
+  return data;
 }
 
 export async function getSpendingByCategory(
-  month: string,
+  month?: string,
 ): Promise<SpendingSummary> {
-  void month;
-  return getJson<SpendingSummary>("/api/spending", mockSpending);
+  const params = month ? { month } : undefined;
+  const { data } = await apiClient.get<SpendingSummary>("/spending", { params });
+  return data;
 }
 
 export async function getRecentTransactions(): Promise<RecentTransactions> {
-  return getJson<RecentTransactions>(
-    "/api/transactions/recent",
-    mockRecentTransactions,
+  const { data } = await apiClient.get<RecentTransactions>(
+    "/transactions/recent",
   );
+  return data;
 }
 
 export async function getPlan(): Promise<Plan> {
-  return getJson<Plan>("/api/plans/current", mockPlan);
+  const { data } = await apiClient.get<Plan>("/plans/current");
+  return data;
 }
 
 export async function getGoals(): Promise<Goal[]> {
-  return getJson<Goal[]>("/api/goals", mockGoals);
+  const { data } = await apiClient.get<Goal[]>("/goals");
+  return data;
 }
 
 export async function getInsights(): Promise<InsightsBundle> {
-  return getJson<InsightsBundle>("/api/insights", mockInsights);
+  const { data } = await apiClient.get<InsightsBundle>("/insights");
+  return data;
 }

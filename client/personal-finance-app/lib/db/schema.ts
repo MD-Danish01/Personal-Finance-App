@@ -10,14 +10,15 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 /**
  * Money is stored as integer paise (1 INR = 100 paise) so all financial
  * math stays exact and deterministic — never float.
  *
- * user_id columns hold Auth.js (next-auth v5) user IDs from Google OAuth.
- * There is intentionally no local users table.
+ * user_id columns hold Auth.js (next-auth v5) user IDs from Google OAuth
+ * and reference auth_users.id (managed by @auth/drizzle-adapter).
  */
 
 // ---------- Enums ----------
@@ -83,11 +84,75 @@ export const dataSessionStatusEnum = pgEnum("data_session_status", [
   "FAILED",
 ]);
 
+// ---------- Auth.js tables ----------
+// Required by @auth/drizzle-adapter. Table names (user, account, session,
+// verificationToken) and column shapes must match what the adapter expects.
+// See: https://authjs.dev/getting-started/adapters/drizzle
+
+export const authUsers = pgTable("user", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name"),
+  email: text("email").unique(),
+  emailVerified: timestamp("emailVerified", { mode: "date" }),
+  image: text("image"),
+});
+
+export const authAccounts = pgTable(
+  "account",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (account) => [
+    primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
+  ],
+);
+
+export const authSessions = pgTable("session", {
+  sessionToken: text("sessionToken").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+});
+
+export const authVerificationTokens = pgTable(
+  "verificationToken",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (verificationToken) => [
+    primaryKey({
+      columns: [verificationToken.identifier, verificationToken.token],
+    }),
+  ],
+);
+
 // ---------- Core finance tables ----------
 
 export const financialProfiles = pgTable("financial_profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: text("user_id").notNull().unique(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
   monthlyIncome: integer("monthly_income").notNull(), // paise
   currency: text("currency").notNull().default("INR"),
   essentialsPercent: integer("essentials_percent").notNull().default(50),
@@ -112,7 +177,9 @@ export const plans = pgTable(
   "plans",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     month: integer("month").notNull(), // 1-12
     year: integer("year").notNull(),
     monthlyIncome: integer("monthly_income").notNull(), // paise, snapshot at plan time
@@ -149,7 +216,9 @@ export const transactions = pgTable(
   "transactions",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     amount: integer("amount").notNull(), // paise
     type: transactionTypeEnum("type").notNull(),
     category: transactionCategoryEnum("category").notNull(),
@@ -172,7 +241,9 @@ export const goals = pgTable(
   "goals",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     icon: text("icon").notNull().default("target"),
     targetAmount: integer("target_amount").notNull(), // paise
@@ -210,7 +281,9 @@ export const limits = pgTable(
   "limits",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     category: transactionCategoryEnum("category").notNull(),
     monthlyLimit: integer("monthly_limit").notNull(), // paise
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -225,7 +298,10 @@ export const limits = pgTable(
 
 export const emergencyFunds = pgTable("emergency_funds", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: text("user_id").notNull().unique(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
   targetAmount: integer("target_amount").notNull(), // paise
   currentAmount: integer("current_amount").notNull().default(0), // paise
   updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -237,7 +313,9 @@ export const notifications = pgTable(
   "notifications",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     type: text("type").notNull(), // e.g. "limit_warning", "plan_deviation"
     title: text("title").notNull(),
     body: text("body").notNull(),
@@ -253,7 +331,9 @@ export const insights = pgTable(
   "insights",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description").notNull(),
     tone: insightToneEnum("tone").notNull().default("info"),
@@ -270,7 +350,9 @@ export const connectedFinancialAccounts = pgTable(
   "connected_financial_accounts",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     fipId: text("fip_id").notNull(), // e.g. "HDFC", "ICICI" per Setu registry
     fipName: text("fip_name").notNull(),
     maskedAccountNumber: text("masked_account_number"),
@@ -286,7 +368,9 @@ export const setuConsents = pgTable(
   "setu_consents",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     consentId: text("consent_id").notNull().unique(), // Setu's consent handle
     status: consentStatusEnum("status").notNull().default("PENDING"),
     consentUrl: text("consent_url"), // hosted consent screen URL

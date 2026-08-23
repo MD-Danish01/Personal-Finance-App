@@ -1,12 +1,18 @@
 import type { ReactNode } from "react";
+import { auth } from "@/auth";
 import { AppShell } from "@/components/ui/AppShell";
 import { BottomNav } from "@/components/ui/BottomNav";
+import { AuthSessionProvider } from "@/components/providers/SessionProvider";
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default async function AppLayout({ children }: { children: ReactNode }) {
+  const session = await auth();
+
   return (
-    <AppShell>
-      {children}
-      <BottomNav />
-    </AppShell>
+    <AuthSessionProvider session={session}>
+      <AppShell>
+        {children}
+        <BottomNav />
+      </AppShell>
+    </AuthSessionProvider>
   );
 }

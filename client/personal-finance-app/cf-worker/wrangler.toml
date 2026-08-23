@@ -1,0 +1,8 @@
+name = "setu-auth-relay"
+main = "index.js"
+compatibility_date = "2024-08-23"
+
+# Add these in Cloudflare Dashboard → Workers → setu-auth-relay → Settings → Variables
+
+[observability]
+enabled = true

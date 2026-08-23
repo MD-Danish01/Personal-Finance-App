@@ -21,13 +21,21 @@ export async function getSetuAccessToken(): Promise<string> {
     throw new Error("Setu auth credentials not configured");
   }
 
+  // Detect if using Cloudflare Worker relay (no /v1/users/login path)
+  const isWorkerRelay = authUrl.includes(".workers.dev") || authUrl.includes("cloudflare");
+
+  const endpoint = isWorkerRelay ? authUrl : `${authUrl}/v1/users/login`;
+  const payload = isWorkerRelay
+    ? {}
+    : {
+        clientID: clientId,
+        grant_type: "client_credentials",
+        secret: clientSecret,
+      };
+
   const { data } = await axios.post(
-    `${authUrl}/v1/users/login`,
-    {
-      clientID: clientId,
-      grant_type: "client_credentials",
-      secret: clientSecret,
-    },
+    endpoint,
+    payload,
     {
       headers: {
         client: "bridge",

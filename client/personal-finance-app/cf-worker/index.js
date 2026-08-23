@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker: Setu Auth Relay
- * Forwards POST /v1/users/login to Setu with credentials from environment.
+ * Forwards POST to Setu auth endpoint with credentials from environment secrets.
  * Deploy to Cloudflare Workers (static egress IPs) and set SETU_AUTH_URL to the Worker URL.
  */
 
@@ -12,17 +12,7 @@ export default {
     }
 
     try {
-      const body = await request.json();
-
-      // Validate required fields
-      if (!body.clientID || !body.secret || body.grant_type !== "client_credentials") {
-        return new Response(JSON.stringify({ error: "Invalid request body" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      // Forward to Setu auth endpoint
+      // Forward to Setu auth endpoint using credentials from environment secrets
       const setuRes = await fetch("https://orgservice-prod.setu.co/v1/users/login", {
         method: "POST",
         headers: {

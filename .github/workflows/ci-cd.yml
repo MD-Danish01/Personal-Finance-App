@@ -76,13 +76,21 @@ jobs:
             fi
 
             APP_DIR="${{ secrets.EC2_APP_DIR }}"
+            APP_DIR="${APP_DIR:-/project/Personal-Finance-App}"
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
+            git config --global --add safe.directory "$APP_DIR" || true
+
             if [ -d .git ]; then
-              git pull origin main
+              git remote set-url origin https://github.com/${{ github.repository }}.git 2>/dev/null || true
+              git fetch origin main
+              git reset --hard origin/main
             else
-              git clone https://github.com/${{ github.repository }}.git .
+              git init
+              git remote add origin https://github.com/${{ github.repository }}.git 2>/dev/null || git remote set-url origin https://github.com/${{ github.repository }}.git
+              git fetch origin main
+              git checkout -f -B main origin/main
             fi
 
             cd client/personal-finance-app

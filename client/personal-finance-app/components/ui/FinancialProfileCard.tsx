@@ -66,9 +66,14 @@ export function FinancialProfileCard() {
       setProfile(data);
       setIncome(formatIncomeDisplay(data.monthlyIncome));
       setEditing(false);
-      setMessage("Income saved!");
-    } catch {
-      setMessage("Failed to save. Try again.");
+      setMessage("Income saved successfully!");
+    } catch (err: unknown) {
+      const errorMsg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
+              ?.error
+          : "Failed to save income. Please try again.";
+      setMessage(errorMsg ?? "Failed to save income. Try again.");
     } finally {
       setSaving(false);
     }

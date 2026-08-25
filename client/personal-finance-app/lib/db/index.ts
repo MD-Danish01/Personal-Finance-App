@@ -13,12 +13,10 @@ function createClient() {
   // Pooled connection (pgbouncer) for runtime queries; direct URL is
   // reserved for Drizzle Kit migrations (see drizzle.config.ts).
   const connectionString =
-    process.env.DATABASE_URL_POOLED ?? process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error(
-      "DATABASE_URL_POOLED or DATABASE_URL environment variable is not set",
-    );
-  }
+    process.env.DATABASE_URL_POOLED ||
+    process.env.DATABASE_URL ||
+    "postgresql://postgres:postgres@127.0.0.1:5432/postgres";
+
   // prepare: false is required for Supabase "Transaction" pool mode (pgbouncer)
   return postgres(connectionString, { prepare: false });
 }

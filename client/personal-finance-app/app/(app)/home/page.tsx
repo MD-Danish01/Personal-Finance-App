@@ -10,12 +10,14 @@ import { SafeToSpendCard } from "@/components/screens/SafeToSpendCard";
 import { MonthOverviewList } from "@/components/screens/MonthOverviewList";
 import { GoalProgressCard } from "@/components/screens/GoalProgressCard";
 import { InsightCard } from "@/components/screens/InsightCard";
+import { FinancialAdvisorModal } from "@/components/ai/FinancialAdvisorModal";
 import type { DashboardSummary } from "@/lib/types";
 
 export default function HomePage() {
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [advisorOpen, setAdvisorOpen] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -40,7 +42,7 @@ export default function HomePage() {
   if (error) {
     return (
       <div className="px-5 pb-4">
-        <Header name="Friend" />
+        <Header name="Friend" onOpenAI={() => setAdvisorOpen(true)} />
         <Card className="mt-8 p-6 text-center space-y-3">
           <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
             <Icon name="alert-triangle" size={24} />
@@ -62,7 +64,7 @@ export default function HomePage() {
   if (!dashboard) {
     return (
       <div className="px-5 pb-4">
-        <Header name="" />
+        <Header name="" onOpenAI={() => setAdvisorOpen(true)} />
         <div className="mt-6 animate-pulse space-y-4">
           <div className="h-32 rounded-3xl bg-muted-bg" />
           <div className="h-44 rounded-2xl bg-muted-bg" />
@@ -76,7 +78,7 @@ export default function HomePage() {
 
   return (
     <div className="px-5 pb-8 space-y-6">
-      <Header name={userName} />
+      <Header name={userName} onOpenAI={() => setAdvisorOpen(true)} />
 
       <SafeToSpendCard
         amount={dashboard.safeToSpendToday}
@@ -131,12 +133,20 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Smart Insight */}
+      {/* Smart Insight & Copilot link */}
       <section>
-        <div className="mb-2.5 px-1">
+        <div className="mb-2.5 flex items-center justify-between px-1">
           <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
             Daily Guidance
           </h2>
+          <button
+            type="button"
+            onClick={() => setAdvisorOpen(true)}
+            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <Icon name="sparkles" size={13} />
+            <span>Ask Copilot</span>
+          </button>
         </div>
         <InsightCard text={dashboard.insight.text} tone={dashboard.insight.tone} />
       </section>
@@ -144,11 +154,16 @@ export default function HomePage() {
       <p className="text-center text-[11px] text-muted font-mono">
         ₹{dashboard.monthSpent.toLocaleString("en-IN")} spent this month
       </p>
+
+      <FinancialAdvisorModal
+        open={advisorOpen}
+        onClose={() => setAdvisorOpen(false)}
+      />
     </div>
   );
 }
 
-function Header({ name }: { name: string }) {
+function Header({ name, onOpenAI }: { name: string; onOpenAI: () => void }) {
   return (
     <header className="flex items-center justify-between px-1 py-5">
       <div>
@@ -157,7 +172,15 @@ function Header({ name }: { name: string }) {
         </h1>
         <p className="text-xs text-muted mt-0.5">Here is your financial snapshot for today</p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={onOpenAI}
+          aria-label="Ask AI Copilot"
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary hover:scale-105 transition-transform cursor-pointer"
+        >
+          <Icon name="sparkles" size={17} />
+        </button>
         <UserAvatar />
       </div>
     </header>

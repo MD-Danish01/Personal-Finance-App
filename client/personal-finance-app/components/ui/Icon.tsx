@@ -2,9 +2,11 @@ import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   ArrowRight,
+  ArrowUp,
   Battery,
   Bell,
   Building,
+  Calculator,
   Calendar,
   Car,
   Check,
@@ -64,6 +66,8 @@ export type IconName =
   | "chevron-right"
   | "chevron-down"
   | "arrow-right"
+  | "arrow-up"
+  | "calculator"
   | "plus"
   | "shopping-bag"
   | "sparkles"
@@ -123,6 +127,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   "chevron-right": ChevronRight,
   "chevron-down": ChevronDown,
   "arrow-right": ArrowRight,
+  "arrow-up": ArrowUp,
+  calculator: Calculator,
   plus: Plus,
   "shopping-bag": ShoppingBag,
   sparkles: Sparkles,

@@ -10,7 +10,8 @@ Traditional financial apps are either **passive expense trackers** (forcing tedi
 Our application is built as an **Intelligent Financial Decision Engine** powered by:
 1. **India's Account Aggregator (AA) Ecosystem** via Setu Gateway for automated, consent-driven bank & UPI data fetching.
 2. **Deterministic Financial Calculation Engine** ensuring that money arithmetic, budget allocations, safe-to-spend limits, and emergency runways are 100% mathematically accurate and verifiable.
-3. **IBM Watsonx.ai (Granite 3.0 / 3.1)** cognitive intelligence layer that translates mathematical deviations into empathetic, actionable human recommendations without ever hallucinating financial numbers.
+3. **Structured Financial Context Injection** ensuring zero AI math hallucinations by feeding pre-computed deterministic facts directly into prompt context.
+4. **IBM Watsonx.ai (Granite 3.0 / 3.1 Instruct)** cognitive intelligence layer translating numerical states into empathetic, actionable human guidance and "Can I Afford This?" decision simulations.
 
 ---
 
@@ -21,11 +22,12 @@ graph TD
     User([User Device / Mobile WebView / Web App])
     
     subgraph Frontend_Layer [Next.js 16 Client & UI]
-        UI_Home[Home / Safe-to-Spend]
+        UI_Home[Home / Safe-to-Spend & Copilot Launcher]
         UI_Money[Money / Cashflow & Donut]
         UI_Plan[Plan / Allocations & Limits]
         UI_Goals[Goals & Contributions]
-        UI_Insights[AI Financial Insights]
+        UI_Insights[AI Insights & Advisor Chat]
+        UI_Sim[Purchase Simulator Modal]
         UI_Profile[Profile & Dynamic Themes]
     end
 
@@ -35,7 +37,8 @@ graph TD
         API_Tx[/api/transactions]
         API_Plan[/api/plans]
         API_Setu[/api/setu/*]
-        API_AI[/api/insights]
+        API_AI_Chat[/api/ai/chat]
+        API_AI_Sim[/api/ai/simulate]
     end
 
     subgraph Deterministic_Financial_Engine [Deterministic Core Logic]
@@ -43,19 +46,18 @@ graph TD
         Engine_Alloc[50/20/20/10 Budget Allocator]
         Engine_Limits[Category Limit & Overspend Detector]
         Engine_Emergency[Emergency Runway Analyzer]
+        Engine_Sim[Purchase Impact Simulator]
         Engine_Goal[Goal Velocity & Rebalancer]
     end
 
-    subgraph Data_Aggregator_Layer [Account Aggregator Pipeline]
-        Setu_Consent[Consent Manager & FIP Router]
-        Setu_Session[Data Session & Statement Fetcher]
-        Normalizer[Merchant Classifier & UPI Normalizer]
+    subgraph Context_Grounding_Layer [Structured Context Injector]
+        Context_Aggregator[Live User Snapshot & Metric Aggregator]
+        Prompt_Builder[Grounded Fact & Guardrails Assembler]
     end
 
     subgraph Cognitive_AI_Layer [IBM Watsonx.ai Integration]
         Granite_Engine[IBM Granite 3.0 / 3.1 Instruct]
-        Prompt_Builder[Financial Context & Anomaly Prompt]
-        Insight_Synthesizer[Actionable Advice & Plan Recovery]
+        Advice_Synthesizer[Actionable Decision & Plan Recovery Synthesizer]
     end
 
     subgraph Storage_Layer [Supabase PostgreSQL DB]
@@ -72,226 +74,192 @@ graph TD
     Frontend_Layer --> Backend_Gateway
     Backend_Gateway --> Auth
     Backend_Gateway --> Deterministic_Financial_Engine
-    Backend_Gateway --> Data_Aggregator_Layer
-    Backend_Gateway --> Cognitive_AI_Layer
+    Backend_Gateway --> Context_Grounding_Layer
+    Context_Grounding_Layer --> Cognitive_AI_Layer
 
     Deterministic_Financial_Engine --> Storage_Layer
-    Data_Aggregator_Layer --> Storage_Layer
+    Context_Grounding_Layer --> Storage_Layer
     Cognitive_AI_Layer --> Storage_Layer
 
-    Setu_Consent -.->|RBI AA Protocol| External_Banks[(Banks & FIPs via Setu)]
+    Backend_Gateway -.->|RBI AA Protocol| External_Banks[(Banks & FIPs via Setu)]
     Cognitive_AI_Layer -.->|REST API / SDK| IBM_Watsonx[(IBM Cloud Watsonx.ai)]
 ```
 
 ---
 
-## 3. Account Aggregator (Setu AA) Data Sync Workflow
+## 3. Structured Financial Context Injection (Zero-Hallucination Architecture)
 
-### How Bank & UPI Transactions Sync:
-1. **Consent Initialization (`/api/setu/connect`)**:
-   - When user clicks **Connect Bank** on `/plan` or `/money`, the app requests a standard `DEPOSIT` financial information consent from Setu.
-   - Setu returns a secure hosted Consent Webview URL.
-2. **User Consent Approval**:
-   - User authenticates via OTP with their Account Aggregator handle (e.g. Onemoney, Anumati, Setu AA).
-   - User selects the bank accounts (SBI, HDFC, ICICI, etc.) to link and approves consent.
-3. **Redirect & Webhook Handling (`/api/setu/callback` & `/api/setu/webhook`)**:
-   - Setu redirects user to `/money?connected=true`.
-   - Simultaneously, Setu sends an asynchronous webhook event `CONSENT_STATUS_UPDATE (APPROVED)`.
-   - Our system creates a `Data Session` (`/v2/sessions`) for the authorized date range.
-4. **Data Ingestion & Normalization (`lib/setu/normalizer.ts`)**:
-   - When the statement data is prepared (`FI_DATA_READY`), the app fetches the encrypted payload.
-   - Raw bank statement line items are parsed:
-     - Amounts are converted to integer **paise** (1 INR = 100 paise).
-     - UPI / IMPS narrations (`UPI/4123/Swiggy Bangalore...`) are categorized (`Food`, `Transport`, `Bills`, `Shopping`, `Entertainment`) using intelligent keyword heuristics.
-     - Transactions are deduplicated using `setuTransactionId` and saved in the `transactions` table.
-5. **Where the User Sees Their Data**:
-   - **`/money`**: Total monthly expenditure, interactive SVG Spending Donut by category, and full transaction history list with date/merchant badges.
-   - **`/home`**: Live **Safe-to-Spend Daily Allowance** (automatically recalculated from income minus real bank expenses) and allocation progress bars.
-   - **`/plan`**: Real-time spending against defined category limits and emergency runway progress.
+```
+User Query: "Can I buy a ₹15,000 phone this month?"
+       │
+       ▼
+SQL Query (Drizzle) ──► Fetches Real Facts:
+                          • Monthly Income: ₹50,000
+                          • Spent this month: ₹28,400
+                          • Current Daily Safe-to-Spend: ₹720/day
+                          • Goa Goal: ₹15,000 / ₹40,000
+       │
+       ▼
+Deterministic Simulator ──► Pre-computes Exact Math:
+                          • New Daily Safe-to-Spend: drops to ₹220/day
+                          • Goal Delay: 14 days
+                          • Feasibility Status: Risky (requires ₹2,000 budget cut in Food/Shopping)
+       │
+       ▼
+IBM Granite 3.0 LLM ──► Synthesizes empathetic explanation and trade-off options!
+```
 
 ---
 
 ## 4. High-Level Pseudocode
 
-### A. Setu AA Webhook & Data Session Ingestion
+### A. Context Aggregator & Purchase Simulator
 
 ```typescript
-// Algorithm: Setu Account Aggregator Asynchronous Ingestion Pipeline
-async function handleSetuWebhook(event: SetuWebhookEvent) {
-  // 1. Idempotency Check
-  const existing = await db.findWebhookEvent(event.eventId);
-  if (existing) return { status: 200, message: "Duplicate event acknowledged" };
-  await db.recordWebhookEvent(event);
-
-  // 2. Consent Approval Handling
-  if (event.type === "CONSENT_STATUS_UPDATE" && event.status === "APPROVED") {
-    const consent = await db.getConsent(event.consentId);
-    // Trigger asynchronous data session for historical 90-day statements
-    const session = await setuClient.createSession({
-      consentId: consent.consentId,
-      dataRange: { from: consent.dataRangeFrom, to: consent.dataRangeTo },
-      format: "json"
-    });
-    await db.saveDataSession({ consentId: consent.consentId, sessionId: session.id, status: "PENDING" });
-  }
-
-  // 3. Financial Information (FI) Data Processing
-  if (event.type === "FI_DATA_READY" && event.status === "COMPLETED") {
-    const rawFIData = await setuClient.fetchSessionData(event.sessionId);
-    
-    // Extract Linked Bank Accounts
-    const discoveredAccounts = extractAccounts(rawFIData, event.userId);
-    await db.saveDiscoveredAccounts(discoveredAccounts);
-
-    // Extract & Normalize Transactions
-    const normalizedTransactions = [];
-    for (const rawTx of rawFIData.transactions) {
-      const isDebit = rawTx.type === "DEBIT" || rawTx.amount < 0;
-      const paise = Math.round(Math.abs(rawTx.amount) * 100);
-      const category = classifyMerchantKeywords(rawTx.narration);
-      const merchant = extractMerchantName(rawTx.narration);
-
-      normalizedTransactions.push({
-        userId: event.userId,
-        amount: paise,
-        type: isDebit ? "expense" : "income",
-        category,
-        merchant,
-        description: rawTx.narration,
-        transactionDate: rawTx.transactionDate,
-        source: "ACCOUNT_AGGREGATOR",
-        setuTransactionId: rawTx.transactionId
-      });
-    }
-
-    // Deduplicated batch insert
-    await db.insertTransactionsDeduplicated(normalizedTransactions);
-    
-    // Trigger deterministic re-calculation
-    await recalculateFinancialSnapshot(event.userId);
-  }
-}
-```
-
----
-
-### B. Deterministic Financial Engine (Safe-to-Spend & Budget Allocation)
-
-```typescript
-// Algorithm: Deterministic Daily Safe-to-Spend & Cashflow Balancer
-function calculateSafeToSpendToday(userProfile, activePlan, currentMonthTransactions) {
-  const totalIncomePaise = activePlan.monthlyIncome || userProfile.monthlyIncome;
-  
-  // Total actual expense sum in current billing cycle (in paise)
-  const totalSpentPaise = currentMonthTransactions
-    .filter(tx => tx.type === "expense")
-    .reduce((sum, tx) => sum + tx.amount, 0);
+// Algorithm: Structured Context Aggregator & Deterministic Simulation
+export async function getStructuredFinancialContext(userId: string) {
+  const profile = await db.query.financialProfiles.findFirst({ where: eq(financialProfiles.userId, userId) });
+  const incomePaise = profile?.monthlyIncome ?? 0;
 
   const now = new Date();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const currentDay = now.getDate();
-  const remainingDays = Math.max(1, daysInMonth - currentDay + 1);
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const startStr = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endStr = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-  // Available discretionary balance after committed allocations
-  const remainingBudgetPaise = Math.max(0, totalIncomePaise - totalSpentPaise);
-  
-  // Daily allowance in Rupees
-  const safeToSpendDailyRupees = Math.round((remainingBudgetPaise / remainingDays) / 100);
-  
+  const categorySpends = await db.getMonthlyCategorySpend(userId, startStr, endStr);
+  const totalSpentPaise = categorySpends.reduce((s, c) => s + c.amount, 0);
+
+  const daysRemaining = Math.max(1, lastDay - now.getDate() + 1);
+  const remainingBudgetPaise = Math.max(0, incomePaise - totalSpentPaise);
+  const dailySafeToSpendRupees = Math.round((remainingBudgetPaise / daysRemaining) / 100);
+
+  const goals = await db.getUserGoals(userId);
+
   return {
-    safeToSpendDailyRupees,
-    monthSpentRupees: Math.round(totalSpentPaise / 100),
-    monthBudgetRupees: Math.round(totalIncomePaise / 100),
-    remainingDays,
-    isOverspent: totalSpentPaise > totalIncomePaise
+    incomeRupees: Math.round(incomePaise / 100),
+    spentRupees: Math.round(totalSpentPaise / 100),
+    remainingDays: daysRemaining,
+    dailySafeToSpendRupees,
+    byCategory: categorySpends.map(c => ({ category: c.category, amountRupees: Math.round(c.amount / 100) })),
+    goals: goals.map(g => ({ name: g.name, currentRupees: Math.round(g.currentAmount / 100), targetRupees: Math.round(g.targetAmount / 100) }))
+  };
+}
+
+export function simulatePurchaseImpact(context, purchaseAmountRupees) {
+  const purchasePaise = purchaseAmountRupees * 100;
+  const currentRemainingPaise = (context.incomeRupees - context.spentRupees) * 100;
+  const newRemainingPaise = Math.max(0, currentRemainingPaise - purchasePaise);
+  const newDailySafeToSpend = Math.round((newRemainingPaise / context.remainingDays) / 100);
+
+  const isAffordable = currentRemainingPaise >= purchasePaise && newDailySafeToSpend >= 150;
+  const reductionPercent = context.dailySafeToSpendRupees > 0 
+    ? Math.round(((context.dailySafeToSpendRupees - newDailySafeToSpend) / context.dailySafeToSpendRupees) * 100)
+    : 100;
+
+  return {
+    purchaseAmountRupees,
+    originalDailySafeToSpend: context.dailySafeToSpendRupees,
+    newDailySafeToSpend,
+    dailyDropRupees: context.dailySafeToSpendRupees - newDailySafeToSpend,
+    reductionPercent,
+    isAffordable
   };
 }
 ```
 
 ---
 
-### C. IBM Watsonx (Granite 3.0) Cognitive Insight Engine
+### B. IBM Watsonx Granite AI Agent
 
 ```typescript
-// Algorithm: IBM Watsonx Granite Insight Generation & Plan Recovery
-async function generateGraniteFinancialInsights(userId: string) {
-  // 1. Fetch Deterministic State (Zero AI Hallucination for math)
-  const profile = await db.getProfile(userId);
-  const plan = await db.getActivePlan(userId);
-  const txSummary = await db.getMonthlyCategorySpend(userId);
-  const goals = await db.getUserGoals(userId);
-
-  // 2. Build Structured Prompt for IBM Granite
+// Algorithm: Grounded IBM Granite Generation
+export async function generateGraniteAdvisorResponse(userQuery: string, context: StructuredContext) {
   const prompt = `
-You are an expert financial advisor powered by IBM watsonx.ai.
-Analyze the user's financial metrics and generate concise, actionable recommendations.
+You are the AI Financial Copilot powered by IBM watsonx.ai and IBM Granite 3.0.
+Your goal is to provide concise, empathetic, and actionable financial decision support.
 
-USER METRICS:
-- Monthly Income: ₹${profile.monthlyIncome / 100}
-- Current Month Total Spend: ₹${txSummary.totalSpent / 100}
-- Savings Rate: ${txSummary.savingsRate}%
-- Category Spend Breakdown: ${JSON.stringify(txSummary.byCategory)}
-- Active Goals: ${goals.map(g => `${g.name} (${g.current / 100}/${g.target / 100})`).join(", ")}
+VERIFIED FACTS (GROUNDING DATA - DO NOT HALLUCINATE OR CHANGE NUMBERS):
+- Monthly Income: ₹${context.incomeRupees.toLocaleString("en-IN")}
+- Total Spent This Month: ₹${context.spentRupees.toLocaleString("en-IN")}
+- Daily Safe-to-Spend: ₹${context.dailySafeToSpendRupees}/day (${context.remainingDays} days left in month)
+- Category Spend: ${JSON.stringify(context.byCategory)}
+- Active Goals: ${context.goals.map(g => `${g.name}: ₹${g.currentRupees}/₹${g.targetRupees}`).join(", ") || "None"}
 
-RULES:
-1. Be concise, positive, and direct.
-2. If spending in discretionary categories is high (>30%), suggest specific reallocation.
-3. Recommend 1 recovery step if any category limit is exceeded.
-4. Output in structured JSON format with title, description, and tone ('positive' | 'warning' | 'info').
+USER QUESTION: "${userQuery}"
+
+INSTRUCTIONS:
+1. Answer directly and concisely (max 3 short paragraphs).
+2. Reference the exact numbers from the verified facts above.
+3. Suggest 1 or 2 specific actionable steps if spending adjustments are needed.
+4. Format using clean GitHub-flavored Markdown.
 `;
 
-  // 3. Call IBM Watsonx.ai Granite 3.0 Instruct
-  const response = await ibmWatsonxClient.generateText({
+  // Call IBM Watsonx.ai Granite 3.0
+  const response = await watsonxClient.generateText({
     modelId: "ibm/granite-3-8b-instruct",
     projectId: process.env.WATSONX_PROJECT_ID,
     input: prompt,
     parameters: {
-      temperature: 0.2, // Low temperature for factual consistency
-      max_new_tokens: 300
+      temperature: 0.2, // Low temperature for high factual accuracy
+      max_new_tokens: 350
     }
   });
 
-  const parsedInsights = JSON.parse(response.results[0].generated_text);
-  
-  // 4. Persist to DB for instant mobile retrieval
-  await db.saveInsights(userId, parsedInsights);
-  return parsedInsights;
+  return response.results[0].generated_text.trim();
 }
 ```
 
 ---
 
-## 5. Strategic Ideas to Win the IBM Hackathon 🏆
+## 5. Account Aggregator (Setu AA) Data Sync Workflow
 
-To make this project stand out against typical hackathon projects, focus on these 4 pillars:
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as Next.js Web/Mobile
+    participant Backend as Next.js Route Handlers
+    participant Setu as Setu AA Gateway
+    participant Bank as User Bank / FIP
+    participant DB as PostgreSQL
 
-### Pillar 1: Deep IBM Technology Alignment
-* **Integrate IBM Watsonx.ai (Granite 3.0 / 3.1 Instruct)**: Highlight that while financial mathematics is kept deterministic for trust and compliance, IBM Granite powers the **Contextual Decision Explanations**, **Spending Anomaly Summaries**, and **Interactive Plan Recovery Simulators**.
-* **Enterprise-grade Governance (watsonx.governance concept)**: Emphasize that the AI is bounded by strict system guardrails—it never hallucinates account balances or invents transaction records.
+    User->>App: Click "Connect Bank"
+    App->>Backend: POST /api/setu/connect (Mobile No)
+    Backend->>Setu: POST /v2/consents (DEPOSIT, Periodic)
+    Setu-->>Backend: Return Consent URL & Consent ID
+    Backend->>DB: Save setu_consents (status: PENDING)
+    Backend-->>App: Open Setu Consent Webview
 
-### Pillar 2: Leveraging India's Digital Public Infrastructure (DPI)
-* **Real Account Aggregator (RBI Regulated)**: Most hackathon projects use dummy hardcoded mock data. Demonstrating live or sandbox consent approval through Setu AA showcasing multi-bank discovery (SBI + HDFC + ICICI) proves real-world viability.
-* **Consent Lifecycle Management**: Include consent transparency (View Linked Banks, Revoke Consent anytime) which satisfies RBI AA guidelines and DPDP Act (Data Protection) standards.
+    User->>Setu: OTP Verification & Select Bank Accounts
+    Setu->>Bank: Request Account Authorization
+    Bank-->>Setu: Consent Granted
+    Setu->>App: Redirect to /plan?connected=true
 
-### Pillar 3: "What-If" Financial Simulation (Interactive Feature)
-* Add a **"Can I Afford This?"** purchase simulator:
-  - User enters a prospective purchase (e.g. ₹15,000 for a new smartphone).
-  - The deterministic engine calculates how this purchase impacts:
-    1. Safe-to-Spend for the rest of the month (drops from ₹600/day to ₹200/day).
-    2. Goal delay (Goa trip delayed by 14 days).
-  - IBM Granite explains the trade-off in plain, empowering language.
+    Note over Setu,Backend: Asynchronous Notification Flow
+    Setu->>Backend: Webhook: CONSENT_STATUS_UPDATE (APPROVED)
+    Backend->>DB: Update setu_consents (status: APPROVED)
+    Backend->>Setu: POST /v2/sessions (Create Data Session)
+    Setu-->>Backend: Session Created (PENDING)
 
-### Pillar 4: Exceptional UI/UX & Dynamic Theming
-* **Polished FinTech Aesthetics**: Segmented controls, smooth progress bars, masked bank account badges, dark/light theme switching, and custom primary palettes (Emerald, Indigo, Ocean Blue, Violet, Amber, Rose) stored in PostgreSQL.
-* **Zero Jitter / Zero Calculation Discrepancies**: All currency values adhere to standard paise math, avoiding the common floating-point rounding errors seen in rushed apps.
+    Setu->>Backend: Webhook: FI_DATA_READY (COMPLETED)
+    Backend->>Setu: GET /v2/sessions/:id
+    Setu-->>Backend: Return Encrypted FI Statement JSON
+    Backend->>Backend: Normalize UPI/Card narrations & Categorize
+    Backend->>DB: Deduplicated INSERT into transactions & connected_accounts
+    Backend->>DB: Recalculate Safe-to-Spend & Budget Allocations
+    App->>Backend: GET /api/dashboard & /api/spending
+    Backend-->>App: Fresh live data with Bank Spends & updated Safe-to-Spend
+```
 
 ---
 
-## 6. Implementation Roadmap to Hackathon Submission
+## 6. Strategic Winning Pillars for IBM Hackathon
 
-| Phase | Milestone | Deliverables |
+| Pillar | Technical Implementation | Hackathon Impact |
 | :--- | :--- | :--- |
-| **Phase 1 (Completed)** | **Core MVP Business Logic & UI** | Full dashboard, manual transaction logging, Setu AA cards, category limits, emergency fund runway, database-backed theming. |
-| **Phase 2 (Completed)** | **Financial Integrity & Multiplier Fixes** | Unified paise/rupee math, timezone-safe date bounding, instant income baseline synchronization. |
-| **Phase 3 (Next)** | **IBM Watsonx.ai Integration** | Connect `@ibm-cloud/watsonx-ai`, create Granite prompt pipeline for `/api/insights`, and build the AI Advisor chat assistant. |
-| **Phase 4** | **Demo Video & Presentation Deck** | End-to-end recorded walkthrough (Profile -> AA Consent -> Live Transaction -> Safe-to-Spend -> IBM Granite Advice). |
+| **1. IBM Watsonx & Granite 3.0** | Integrated `@ibm-cloud/watsonx-ai` calling Granite 3.0/3.1 8B Instruct with structured context injection. | Direct alignment with IBM AI stack and SkillsBuild evaluation criteria. |
+| **2. Zero-Hallucination Math** | Structured Metric Aggregator + Deterministic Purchase Simulator. | Solves the primary flaw of AI in FinTech: Eliminates math hallucinations and grounds answers in verifiable data. |
+| **3. India DPI / Account Aggregator** | Real Setu AA Consent, Data Session, and UPI Normalization Pipeline. | Demonstrates real-world enterprise applicability in India's regulated FinTech landscape. |
+| **4. Interactive "Can I Afford This?" Decisioning** | Purchase simulator with real-time Safe-to-Spend impact analysis. | Transforms the app from a passive ledger into an indispensable financial decision copilot. |

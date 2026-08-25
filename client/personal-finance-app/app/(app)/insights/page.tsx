@@ -7,12 +7,16 @@ import { InsightCard } from "@/components/screens/InsightCard";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
+import { FinancialAdvisorModal } from "@/components/ai/FinancialAdvisorModal";
+import { PurchaseSimulatorModal } from "@/components/ai/PurchaseSimulatorModal";
 import type { InsightsBundle } from "@/lib/types";
 
 export default function InsightsPage() {
   const [insights, setInsights] = useState<InsightsBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [advisorOpen, setAdvisorOpen] = useState(false);
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -61,6 +65,7 @@ export default function InsightsPage() {
       <div className="px-5 pb-4">
         <Header />
         <div className="mt-6 animate-pulse space-y-4">
+          <div className="h-32 rounded-2xl bg-muted-bg" />
           <div className="grid grid-cols-2 gap-3">
             <div className="h-28 rounded-2xl bg-muted-bg" />
             <div className="h-28 rounded-2xl bg-muted-bg" />
@@ -76,11 +81,52 @@ export default function InsightsPage() {
     <div className="px-5 pb-8 space-y-6">
       <Header />
 
+      {/* Financial Copilot Hero Card */}
+      <Card className="p-5 space-y-3.5 border-card-border bg-card shadow-xs relative overflow-hidden">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
+              <Icon name="sparkles" size={20} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-foreground">Financial Decision Copilot</h2>
+              <p className="text-xs text-muted">Real-time answers grounded in your budget & goals</p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-foreground/80 leading-relaxed">
+          Ask questions about your cashflow, check if you can afford prospective purchases, or get personalized budget recovery advice.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setAdvisorOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+          >
+            <Icon name="sparkles" size={14} />
+            <span>Ask Financial Copilot</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSimulatorOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted-bg border border-card-border hover:bg-card-border/40 text-foreground text-xs font-bold transition-colors cursor-pointer"
+          >
+            <Icon name="calculator" size={14} className="text-primary" />
+            <span>Can I Afford This?</span>
+          </button>
+        </div>
+      </Card>
+
       {/* KPI Trend Cards */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4 bg-amber-500/10 border-amber-500/20 text-foreground space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Spending Trend</span>
+            <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+              Spending Trend
+            </span>
             <Icon name="trending-up" size={16} className="text-amber-500" />
           </div>
           <div className="text-2xl font-extrabold text-foreground font-mono">
@@ -131,6 +177,17 @@ export default function InsightsPage() {
           ))
         )}
       </section>
+
+      {/* Modals */}
+      <FinancialAdvisorModal
+        open={advisorOpen}
+        onClose={() => setAdvisorOpen(false)}
+      />
+
+      <PurchaseSimulatorModal
+        open={simulatorOpen}
+        onClose={() => setSimulatorOpen(false)}
+      />
     </div>
   );
 }

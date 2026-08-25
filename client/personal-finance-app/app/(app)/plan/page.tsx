@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getPlan } from "@/lib/api";
 import { formatINR } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
-import { ConnectBankCard } from "@/components/ui/ConnectBankCard";
+import { ConnectedAccountsCard } from "@/components/ui/ConnectedAccountsCard";
+import { CategoryLimitsCard } from "@/components/ui/CategoryLimitsCard";
+import { EmergencyFundCard } from "@/components/ui/EmergencyFundCard";
 import { EditPlanModal } from "@/components/ui/EditPlanModal";
 import { PlanBreakdownRow } from "@/components/screens/PlanBreakdownRow";
 import { InsightCard } from "@/components/screens/InsightCard";
@@ -18,29 +20,38 @@ export default function PlanPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
 
-  function loadPlan() {
+  const loadPlan = useCallback(() => {
     setError(null);
-    getPlan().then(setPlan).catch((e) => setError(e.response?.data?.error ?? "Failed to load plan"));
-  }
+    getPlan()
+      .then(setPlan)
+      .catch((e) => setError(e.response?.data?.error ?? "Failed to load plan"));
+  }, []);
 
   useEffect(() => {
-    getPlan().then(setPlan).catch((e) => {
-      if (e.response?.status === 404) setError("Set your monthly income to generate a plan.");
-      else setError(e.response?.data?.error ?? "Failed to load plan");
-    });
+    getPlan()
+      .then(setPlan)
+      .catch((e) => {
+        if (e.response?.status === 404)
+          setError("Set your monthly income in Profile to generate your plan.");
+        else setError(e.response?.data?.error ?? "Failed to load plan");
+      });
   }, []);
 
   if (error) {
     return (
       <div className="px-5 pb-4">
-        <Header />
-        <Card className="mt-6 p-6 text-center">
-          <p className="text-sm text-muted">{error}</p>
+        <Header onEditPlan={() => setEditing(true)} />
+        <Card className="mt-8 p-6 text-center space-y-3">
+          <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-primary-soft text-primary">
+            <Icon name="wallet" size={24} />
+          </div>
+          <p className="text-sm font-semibold text-foreground">{error}</p>
           <Link
             href="/profile"
-            className="mt-3 inline-block text-sm font-medium text-brand-blue"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold"
           >
-            Go to profile to set income
+            <Icon name="user" size={14} />
+            Go to Profile Setup
           </Link>
         </Card>
       </div>
@@ -50,35 +61,54 @@ export default function PlanPage() {
   if (!plan) {
     return (
       <div className="px-5 pb-4">
-        <Header />
+        <Header onEditPlan={() => setEditing(true)} />
         <div className="mt-6 animate-pulse space-y-4">
-          <div className="h-16 rounded-xl bg-muted/50" />
-          <div className="h-64 rounded-2xl bg-muted/50" />
+          <div className="h-16 rounded-xl bg-muted-bg" />
+          <div className="h-64 rounded-2xl bg-muted-bg" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="px-5 pb-4">
-      <Header />
+    <div className="px-5 pb-8 space-y-6">
+      <Header onEditPlan={() => setEditing(true)} />
 
-      <Card className="flex items-center gap-3 p-4">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-green-soft text-brand-green">
-          <Icon name="wallet" size={19} />
+      {/* Income overview banner */}
+      <Card className="flex items-center gap-3.5 p-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary font-bold shadow-xs">
+          <Icon name="wallet" size={20} />
         </span>
-        <span className="flex-1 text-sm font-medium">Monthly income</span>
-        <span className="text-sm font-bold">{formatINR(plan.monthlyIncome / 100)}</span>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-semibold text-muted block">Planned Monthly Income</span>
+          <span className="text-lg font-bold text-foreground font-mono">
+            {formatINR(plan.monthlyIncome / 100)}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="px-3 py-1.5 rounded-xl bg-muted-bg hover:bg-primary-soft hover:text-primary text-xs font-bold text-muted transition-colors cursor-pointer"
+        >
+          Edit Split
+        </button>
       </Card>
 
-      <section className="mt-7">
+      {/* Plan allocation breakdown */}
+      <section>
         <div className="mb-3 flex items-center justify-between px-1">
-          <h2 className="text-sm font-semibold">Plan breakdown</h2>
-          <button onClick={() => setEditing(true)} className="rounded-md px-2 py-1 text-xs font-medium text-brand-blue hover:bg-brand-blue-soft focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
-            Edit plan
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
+            Allocation Strategy (50/20/20/10)
+          </h2>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-xs font-bold text-primary hover:underline cursor-pointer"
+          >
+            Adjust
           </button>
         </div>
-        <Card className="divide-y divide-border/60 overflow-hidden">
+        <Card className="divide-y divide-card-border overflow-hidden">
           {plan.allocations.map((allocation) => (
             <PlanBreakdownRow
               key={allocation.key}
@@ -89,7 +119,18 @@ export default function PlanPage() {
         </Card>
       </section>
 
-      <section className="mt-6">
+      {/* Category Spending Limits */}
+      <section>
+        <CategoryLimitsCard />
+      </section>
+
+      {/* Emergency Fund Runway */}
+      <section>
+        <EmergencyFundCard />
+      </section>
+
+      {/* Why this plan insight */}
+      <section>
         <InsightCard
           title="Why this plan?"
           text={plan.whyThisPlan}
@@ -98,19 +139,36 @@ export default function PlanPage() {
         />
       </section>
 
-      <ConnectBankCard />
-      <EditPlanModal open={editing} allocations={plan.allocations} onClose={() => setEditing(false)} onSaved={loadPlan} />
+      {/* Connected Accounts / Bank AA */}
+      <section>
+        <ConnectedAccountsCard />
+      </section>
+
+      <EditPlanModal
+        open={editing}
+        allocations={plan.allocations}
+        onClose={() => setEditing(false)}
+        onSaved={loadPlan}
+      />
     </div>
   );
 }
 
-function Header() {
+function Header({ onEditPlan }: { onEditPlan: () => void }) {
   return (
     <header className="flex items-center justify-between px-1 py-5">
-      <h1 className="text-[22px] font-bold tracking-tight">My Plan</h1>
-      <div className="flex items-center gap-4">
-        <button aria-label="Adjust plan" className="rounded-full p-1 hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
-          <Icon name="swap" size={21} />
+      <div>
+        <h1 className="text-[22px] font-bold tracking-tight text-foreground">Financial Plan</h1>
+        <p className="text-xs text-muted mt-0.5">Budget allocations, limits, and safety buffers</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          aria-label="Adjust plan"
+          onClick={onEditPlan}
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary hover:scale-105 transition-transform cursor-pointer"
+        >
+          <Icon name="swap" size={18} />
         </button>
         <UserAvatar />
       </div>

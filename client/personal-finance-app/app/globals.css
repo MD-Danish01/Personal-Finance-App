@@ -1,31 +1,164 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f6f8;
-  --foreground: #0f1419;
-  --muted: #6b7280;
-  --border: #ececef;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --muted-bg: #f1f5f9;
+  --border: #e2e8f0;
+  --card-bg: #ffffff;
+  --card-border: rgba(226, 232, 240, 0.9);
 
-  --color-brand-green: #2bb673;
-  --color-brand-green-soft: #e5f7ee;
-  --color-brand-blue: #3d7df6;
-  --color-brand-blue-soft: #e8eefc;
-  --color-brand-purple: #8b6ce6;
-  --color-brand-purple-soft: #f1ebfd;
-  --color-brand-orange: #f39a2b;
-  --color-brand-orange-soft: #fcebd9;
-  --color-brand-red: #ef6a5e;
-  --color-brand-red-soft: #fde5e2;
-  --color-brand-yellow: #f2c53d;
-  --color-brand-yellow-soft: #fcf3d7;
-  --color-gray-dot: #c8ccd3;
+  /* Primary Default (Emerald) */
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-soft: #ecfdf5;
+  --primary-soft-border: #a7f3d0;
+  --primary-foreground: #ffffff;
+
+  /* Category colors */
+  --color-brand-green: #10b981;
+  --color-brand-green-soft: #ecfdf5;
+  --color-brand-blue: #3b82f6;
+  --color-brand-blue-soft: #eff6ff;
+  --color-brand-purple: #8b5cf6;
+  --color-brand-purple-soft: #f5f3ff;
+  --color-brand-orange: #f97316;
+  --color-brand-orange-soft: #fff7ed;
+  --color-brand-red: #ef4444;
+  --color-brand-red-soft: #fef2f2;
+  --color-brand-yellow: #f59e0b;
+  --color-brand-yellow-soft: #fffbeb;
+  --color-gray-dot: #cbd5e1;
+}
+
+/* Palette Overrides (Light Mode) */
+[data-theme-color="indigo"] {
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-soft: #eef2ff;
+  --primary-soft-border: #c7d2fe;
+  --primary-foreground: #ffffff;
+}
+[data-theme-color="blue"] {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --primary-soft-border: #bfdbfe;
+  --primary-foreground: #ffffff;
+}
+[data-theme-color="violet"] {
+  --primary: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --primary-soft: #f5f3ff;
+  --primary-soft-border: #ddd6fe;
+  --primary-foreground: #ffffff;
+}
+[data-theme-color="amber"] {
+  --primary: #d97706;
+  --primary-hover: #b45309;
+  --primary-soft: #fffbeb;
+  --primary-soft-border: #fde68a;
+  --primary-foreground: #ffffff;
+}
+[data-theme-color="rose"] {
+  --primary: #e11d48;
+  --primary-hover: #be123c;
+  --primary-soft: #fff1f2;
+  --primary-soft-border: #fecdd3;
+  --primary-foreground: #ffffff;
+}
+
+/* Dark Mode Variables */
+.dark,
+[data-theme-mode="dark"] {
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --muted: #94a3b8;
+  --muted-bg: rgba(255, 255, 255, 0.06);
+  --border: #1e293b;
+  --card-bg: #131926;
+  --card-border: rgba(255, 255, 255, 0.08);
+
+  /* Primary Default in Dark (Emerald) */
+  --primary: #34d399;
+  --primary-hover: #10b981;
+  --primary-soft: rgba(16, 185, 129, 0.16);
+  --primary-soft-border: rgba(52, 211, 153, 0.3);
+  --primary-foreground: #090d16;
+
+  /* Category colors in dark */
+  --color-brand-green: #34d399;
+  --color-brand-green-soft: rgba(16, 185, 129, 0.16);
+  --color-brand-blue: #60a5fa;
+  --color-brand-blue-soft: rgba(59, 130, 246, 0.16);
+  --color-brand-purple: #a78bfa;
+  --color-brand-purple-soft: rgba(139, 92, 246, 0.16);
+  --color-brand-orange: #fb923c;
+  --color-brand-orange-soft: rgba(249, 115, 22, 0.16);
+  --color-brand-red: #f87171;
+  --color-brand-red-soft: rgba(239, 68, 68, 0.16);
+  --color-brand-yellow: #fbbf24;
+  --color-brand-yellow-soft: rgba(245, 158, 11, 0.16);
+  --color-gray-dot: #475569;
+}
+
+/* Palette Overrides (Dark Mode) */
+.dark[data-theme-color="indigo"],
+[data-theme-mode="dark"][data-theme-color="indigo"] {
+  --primary: #818cf8;
+  --primary-hover: #6366f1;
+  --primary-soft: rgba(99, 102, 241, 0.18);
+  --primary-soft-border: rgba(129, 140, 248, 0.35);
+  --primary-foreground: #090d16;
+}
+.dark[data-theme-color="blue"],
+[data-theme-mode="dark"][data-theme-color="blue"] {
+  --primary: #60a5fa;
+  --primary-hover: #3b82f6;
+  --primary-soft: rgba(37, 99, 235, 0.18);
+  --primary-soft-border: rgba(96, 165, 250, 0.35);
+  --primary-foreground: #090d16;
+}
+.dark[data-theme-color="violet"],
+[data-theme-mode="dark"][data-theme-color="violet"] {
+  --primary: #a78bfa;
+  --primary-hover: #8b5cf6;
+  --primary-soft: rgba(139, 92, 246, 0.18);
+  --primary-soft-border: rgba(167, 139, 250, 0.35);
+  --primary-foreground: #090d16;
+}
+.dark[data-theme-color="amber"],
+[data-theme-mode="dark"][data-theme-color="amber"] {
+  --primary: #fbbf24;
+  --primary-hover: #f59e0b;
+  --primary-soft: rgba(245, 158, 11, 0.18);
+  --primary-soft-border: rgba(251, 191, 36, 0.35);
+  --primary-foreground: #090d16;
+}
+.dark[data-theme-color="rose"],
+[data-theme-mode="dark"][data-theme-color="rose"] {
+  --primary: #fb7185;
+  --primary-hover: #f43f5e;
+  --primary-soft: rgba(244, 63, 94, 0.18);
+  --primary-soft-border: rgba(251, 113, 133, 0.35);
+  --primary-foreground: #090d16;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-muted-bg: var(--muted-bg);
   --color-border: var(--border);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-border: var(--primary-soft-border);
+  --color-primary-foreground: var(--primary-foreground);
 
   --color-brand-green: var(--color-brand-green);
   --color-brand-green-soft: var(--color-brand-green-soft);
@@ -52,18 +185,29 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 @layer utilities {
   .text-muted {
     color: var(--muted);
   }
+  .bg-card {
+    background-color: var(--card-bg);
+  }
+  .border-card {
+    border-color: var(--card-border);
+  }
   .shadow-card {
-    box-shadow: 0 1px 2px rgba(15, 20, 25, 0.04),
-      0 4px 12px rgba(15, 20, 25, 0.04);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05),
+      0 6px 16px -4px rgba(0, 0, 0, 0.04);
+  }
+  .dark .shadow-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4),
+      0 8px 24px -4px rgba(0, 0, 0, 0.5);
   }
   .pb-safe {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem);
   }
   .pt-safe {
     padding-top: calc(env(safe-area-inset-top, 0px));

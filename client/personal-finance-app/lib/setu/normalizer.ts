@@ -1,14 +1,14 @@
 import { db, schema } from "@/lib/db";
-import { sql } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
 
 type Category = "Food" | "Transport" | "Shopping" | "Entertainment" | "Bills" | "Others";
 
 const MERCHANT_RULES: { keywords: string[]; category: Category }[] = [
-  { keywords: ["swiggy", "zomato", "dominos", "mcdonald", "kfc", "foodpanda"], category: "Food" },
-  { keywords: ["uber", "ola", "rapido", "metro", "fuel", "petrol", "indian oil", "bharat petroleum"], category: "Transport" },
-  { keywords: ["amazon", "myntra", "flipkart", "zudio", "ajio", "lifestyle", "pantaloons"], category: "Shopping" },
-  { keywords: ["netflix", "spotify", "hotstar", "prime", "sony", "bookmyshow"], category: "Entertainment" },
-  { keywords: ["airtel", "jio", "vi ", "vodafone", "bsnl", "electricity", "water", "gas", "dth"], category: "Bills" },
+  { keywords: ["swiggy", "zomato", "dominos", "mcdonald", "kfc", "foodpanda", "starbucks", "dunkin", "blinkit", "zepto", "instamart"], category: "Food" },
+  { keywords: ["uber", "ola", "rapido", "metro", "fuel", "petrol", "indian oil", "bharat petroleum", "hpcl", "irctc", "makemytrip"], category: "Transport" },
+  { keywords: ["amazon", "myntra", "flipkart", "zudio", "ajio", "lifestyle", "pantaloons", "nykaa", "tatacliq", "croma"], category: "Shopping" },
+  { keywords: ["netflix", "spotify", "hotstar", "prime", "sony", "bookmyshow", "youtube", "pvr", "inox", "apple"], category: "Entertainment" },
+  { keywords: ["airtel", "jio", "vi ", "vodafone", "bsnl", "electricity", "water", "gas", "dth", "bescom", "tneb", "mahadiscom", "rent", "recharge"], category: "Bills" },
 ];
 
 export function classifyMerchant(description: string): Category {
@@ -23,7 +23,7 @@ export function classifyMerchant(description: string): Category {
 
 export function extractMerchant(description: string): string {
   const text = (description || "").trim();
-  if (!text) return "Unknown";
+  if (!text) return "Direct Transfer";
 
   for (const rule of MERCHANT_RULES) {
     for (const kw of rule.keywords) {
@@ -34,11 +34,11 @@ export function extractMerchant(description: string): string {
     }
   }
 
-  const parts = text.split(/[\s\-|@]+/);
-  return parts[0].replace(/^\w/, (c) => c.toUpperCase()) || "Unknown";
+  const parts = text.split(/[\s\-|@/]+/);
+  return parts[0].replace(/^\w/, (c) => c.toUpperCase()) || "General";
 }
 
-interface NormalizedTransaction {
+export interface NormalizedTransaction {
   userId: string;
   amount: number;
   type: "expense" | "income";
@@ -48,6 +48,14 @@ interface NormalizedTransaction {
   transactionDate: string;
   source: "ACCOUNT_AGGREGATOR";
   setuTransactionId: string | null;
+}
+
+export interface DiscoveredAccount {
+  userId: string;
+  fipId: string;
+  fipName: string;
+  maskedAccountNumber: string;
+  accountType: string;
 }
 
 interface RawFIRecord {
@@ -90,12 +98,32 @@ export function normalizeTransaction(
 export function normalizeFIData(
   fiData: { data?: unknown; FI?: unknown; sessions?: unknown } | Record<string, unknown>,
   userId: string,
-): NormalizedTransaction[] {
+): { transactions: NormalizedTransaction[]; accounts: DiscoveredAccount[] } {
   const transactions: NormalizedTransaction[] = [];
+  const accounts: DiscoveredAccount[] = [];
 
   const extractFromNode = (node: unknown) => {
     if (!node || typeof node !== "object") return;
     const obj = node as Record<string, unknown>;
+
+    // Extract Account info if present
+    if (obj.fipId || obj.fipName || obj.maskedAccNumber || obj.accountNumber) {
+      const fipId = String(obj.fipId || obj.fip || "BANK");
+      const fipName = String(obj.fipName || obj.bankName || fipId);
+      const rawAcc = String(obj.maskedAccNumber || obj.accountNumber || obj.accNumber || "XXXX");
+      const maskedAccountNumber = rawAcc.length > 4 ? `XXXX-${rawAcc.slice(-4)}` : rawAcc;
+      const accountType = String(obj.accountType || obj.type || "DEPOSIT");
+
+      if (!accounts.some((a) => a.maskedAccountNumber === maskedAccountNumber && a.fipId === fipId)) {
+        accounts.push({
+          userId,
+          fipId,
+          fipName,
+          maskedAccountNumber,
+          accountType,
+        });
+      }
+    }
 
     if (Array.isArray(obj.transactions)) {
       for (const tx of obj.transactions) {
@@ -119,7 +147,35 @@ export function normalizeFIData(
 
   extractFromNode(fiData);
 
-  return transactions;
+  return { transactions, accounts };
+}
+
+export async function saveAccounts(accounts: DiscoveredAccount[]) {
+  if (accounts.length === 0) return { inserted: 0 };
+  let inserted = 0;
+
+  for (const acc of accounts) {
+    const existing = await db.query.connectedFinancialAccounts.findFirst({
+      where: and(
+        eq(schema.connectedFinancialAccounts.userId, acc.userId),
+        eq(schema.connectedFinancialAccounts.fipId, acc.fipId),
+        eq(schema.connectedFinancialAccounts.maskedAccountNumber, acc.maskedAccountNumber),
+      ),
+    });
+
+    if (!existing) {
+      await db.insert(schema.connectedFinancialAccounts).values({
+        userId: acc.userId,
+        fipId: acc.fipId,
+        fipName: acc.fipName,
+        maskedAccountNumber: acc.maskedAccountNumber,
+        accountType: acc.accountType,
+      });
+      inserted++;
+    }
+  }
+
+  return { inserted };
 }
 
 export async function saveTransactions(txs: NormalizedTransaction[]) {

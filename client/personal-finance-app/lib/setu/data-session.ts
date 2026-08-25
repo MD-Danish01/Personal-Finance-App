@@ -1,7 +1,7 @@
 import { setuClient } from "./client";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { normalizeFIData, saveTransactions } from "./normalizer";
+import { normalizeFIData, saveTransactions, saveAccounts } from "./normalizer";
 
 export async function createDataSession(consentId: string, userId: string) {
   void userId;
@@ -40,7 +40,8 @@ export async function fetchFIData(sessionId: string, userId: string) {
 
   if (combinedStatus === "COMPLETED" || combinedStatus === "PARTIAL") {
     const normalized = normalizeFIData(data, userId);
-    await saveTransactions(normalized);
+    await saveAccounts(normalized.accounts);
+    await saveTransactions(normalized.transactions);
   }
 
   if (combinedStatus === "COMPLETED") {

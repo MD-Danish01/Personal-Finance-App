@@ -28,7 +28,8 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-border/70 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80"
+    <nav
+      className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-card-border bg-card/90 backdrop-blur-md transition-colors duration-150 shadow-lg"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <ul className="grid grid-cols-5 px-2 py-2">
@@ -39,9 +40,9 @@ export function BottomNav() {
             <li key={tab.href}>
               <Link
                 href={tab.href}
-                className={`flex flex-col items-center gap-1 rounded-lg py-1.5 text-[11px] font-medium transition-colors ${
+                className={`flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? "text-brand-purple"
+                    ? "text-primary font-semibold scale-105"
                     : "text-muted hover:text-foreground"
                 }`}
               >

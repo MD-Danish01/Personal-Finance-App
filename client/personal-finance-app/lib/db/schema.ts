@@ -165,6 +165,8 @@ export const financialProfiles = pgTable("financial_profiles", {
   onboardingCompleted: boolean("onboarding_completed")
     .notNull()
     .default(false),
+  themeColor: text("theme_color").notNull().default("emerald"),
+  themeMode: text("theme_mode").notNull().default("system"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

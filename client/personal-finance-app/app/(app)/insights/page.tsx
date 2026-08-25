@@ -5,6 +5,8 @@ import { getInsights } from "@/lib/api";
 import { formatPercent } from "@/lib/format";
 import { InsightCard } from "@/components/screens/InsightCard";
 import { UserAvatar } from "@/components/ui/UserAvatar";
+import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
 import type { InsightsBundle } from "@/lib/types";
 
 export default function InsightsPage() {
@@ -21,7 +23,9 @@ export default function InsightsPage() {
     return (
       <div className="px-5 pb-4">
         <Header />
-        <p className="mt-10 text-center text-sm text-muted">{error}</p>
+        <Card className="mt-8 p-6 text-center">
+          <p className="text-sm text-muted">{error}</p>
+        </Card>
       </div>
     );
   }
@@ -32,49 +36,71 @@ export default function InsightsPage() {
         <Header />
         <div className="mt-6 animate-pulse space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="h-28 rounded-2xl bg-muted/50" />
-            <div className="h-28 rounded-2xl bg-muted/50" />
+            <div className="h-28 rounded-2xl bg-muted-bg" />
+            <div className="h-28 rounded-2xl bg-muted-bg" />
           </div>
-          <div className="h-20 rounded-2xl bg-muted/50" />
-          <div className="h-20 rounded-2xl bg-muted/50" />
+          <div className="h-20 rounded-2xl bg-muted-bg" />
+          <div className="h-20 rounded-2xl bg-muted-bg" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="px-5 pb-4">
+    <div className="px-5 pb-8 space-y-6">
       <Header />
 
+      {/* KPI Trend Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-brand-orange-soft p-4">
-          <div className="text-xs text-orange-800">Spending trend</div>
-          <div className="mt-3 flex items-center gap-1 text-2xl font-semibold text-orange-800">
-            <span aria-hidden>↑</span>{formatPercent(insights.spendingTrend.value)}
+        <Card className="p-4 bg-amber-500/10 border-amber-500/20 text-foreground space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Spending Trend</span>
+            <Icon name="trending-up" size={16} className="text-amber-500" />
           </div>
-          <div className="mt-1 text-xs text-orange-800/80">{insights.spendingTrend.vsLabel}</div>
-        </div>
-        <div className="rounded-2xl bg-brand-green-soft p-4">
-          <div className="text-xs text-green-800">Savings rate</div>
-          <div className="mt-3 text-2xl font-semibold text-green-950">
+          <div className="text-2xl font-extrabold text-foreground font-mono">
+            {formatPercent(insights.spendingTrend.value)}
+          </div>
+          <div className="text-[11px] text-muted">{insights.spendingTrend.vsLabel}</div>
+        </Card>
+
+        <Card className="p-4 bg-primary-soft border-primary-soft-border text-foreground space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-primary">Savings Rate</span>
+            <Icon name="target" size={16} className="text-primary" />
+          </div>
+          <div className="text-2xl font-extrabold text-foreground font-mono">
             {formatPercent(insights.savingsRate.value)}
           </div>
-          <div className="mt-1 text-xs text-green-800/80">{insights.savingsRate.label}</div>
-        </div>
+          <div className="text-[11px] text-muted">{insights.savingsRate.label}</div>
+        </Card>
       </div>
 
-      <section className="mt-6 space-y-3">
+      {/* Actionable Insights List */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
+            Smart Financial Guidance
+          </h2>
+          <span className="text-[11px] text-primary font-semibold">Live Signals</span>
+        </div>
+
         {insights.items.length === 0 ? (
-          <p className="text-center text-sm text-muted py-8">
-            No insights yet. Connect your bank and add transactions to get insights.
-          </p>
+          <Card className="p-8 text-center space-y-2">
+            <div className="flex h-10 w-10 mx-auto items-center justify-center rounded-xl bg-muted-bg text-muted">
+              <Icon name="sparkles" size={18} />
+            </div>
+            <p className="text-xs text-muted">
+              No anomaly detected. Keep recording your expenses to generate deeper behavioral insights.
+            </p>
+          </Card>
         ) : (
           insights.items.map((item) => (
             <InsightCard
               key={item.id}
+              title={item.title}
               text={item.description}
               tone={item.tone}
-              variant="row"
+              variant="block"
             />
           ))
         )}
@@ -86,7 +112,10 @@ export default function InsightsPage() {
 function Header() {
   return (
     <header className="flex items-center justify-between px-1 py-5">
-      <h1 className="text-[22px] font-bold tracking-tight">Insights for you</h1>
+      <div>
+        <h1 className="text-[22px] font-bold tracking-tight text-foreground">Financial Insights</h1>
+        <p className="text-xs text-muted mt-0.5">Automated pattern detection & guidance</p>
+      </div>
       <UserAvatar />
     </header>
   );

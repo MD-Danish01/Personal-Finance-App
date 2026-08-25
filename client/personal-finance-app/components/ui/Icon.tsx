@@ -1,12 +1,18 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  AlertTriangle,
   ArrowRight,
   Battery,
   Bell,
+  Building,
+  Calendar,
   Car,
+  Check,
+  CheckCircle,
   ChevronDown,
   ChevronRight,
   Coffee,
+  CreditCard,
   Ellipsis,
   Film,
   Filter,
@@ -14,23 +20,30 @@ import {
   Laptop,
   LogOut,
   Menu,
+  Moon,
   MoveUpRight,
+  Palette,
   Plus,
   Receipt,
+  RefreshCw,
   Search,
+  Settings,
   Settings2,
   Shield,
   ShoppingBag,
   ShoppingCart,
   Signal,
   Sparkles,
+  Sun,
   Target,
+  Trash2,
   TrendingUp,
   Utensils,
   User,
   Wallet,
   WalletCards,
   Wifi,
+  X,
 } from "lucide-react";
 
 export type IconName =
@@ -70,7 +83,20 @@ export type IconName =
   | "wifi"
   | "battery"
   | "user"
-  | "log-out";
+  | "log-out"
+  | "sun"
+  | "moon"
+  | "settings"
+  | "check"
+  | "check-circle"
+  | "alert-triangle"
+  | "x"
+  | "credit-card"
+  | "calendar"
+  | "building"
+  | "refresh-cw"
+  | "trash-2"
+  | "palette";
 
 interface IconProps {
   name: IconName;
@@ -117,9 +143,22 @@ const ICONS: Record<IconName, LucideIcon> = {
   battery: Battery,
   user: User,
   "log-out": LogOut,
+  sun: Sun,
+  moon: Moon,
+  settings: Settings,
+  check: Check,
+  "check-circle": CheckCircle,
+  "alert-triangle": AlertTriangle,
+  x: X,
+  "credit-card": CreditCard,
+  calendar: Calendar,
+  building: Building,
+  "refresh-cw": RefreshCw,
+  "trash-2": Trash2,
+  palette: Palette,
 };
 
 export function Icon({ name, size = 20, className, strokeWidth = 1.8 }: IconProps) {
-  const Component = ICONS[name];
+  const Component = ICONS[name] ?? Sparkles;
   return <Component size={size} className={className} strokeWidth={strokeWidth} aria-hidden="true" />;
 }

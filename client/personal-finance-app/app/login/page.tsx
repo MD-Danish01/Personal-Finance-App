@@ -7,15 +7,15 @@ export default async function LoginPage() {
   if (session?.user) redirect("/home");
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-5 py-10">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-card">
-        <div className="mb-8">
-          <div className="mb-3 text-sm font-semibold text-brand-green">
-            Personal Finance
+    <main className="flex min-h-screen items-center justify-center px-5 py-10 bg-background text-foreground transition-colors">
+      <div className="w-full max-w-md rounded-3xl bg-card border border-card-border p-7 shadow-card space-y-6">
+        <div>
+          <div className="mb-2.5 text-xs font-bold uppercase tracking-wider text-primary">
+            Personal Finance Assistant
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted">
-            Sign in to continue planning your money.
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Welcome back</h1>
+          <p className="mt-2 text-xs text-muted leading-relaxed">
+            Plan your money, track actual cashflow, and build long-term wealth with confidence.
           </p>
         </div>
 
@@ -27,7 +27,7 @@ export default async function LoginPage() {
         >
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-border px-4 py-3 font-medium text-foreground hover:bg-black/2"
+            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-card-border bg-muted-bg px-4 py-3.5 text-sm font-bold text-foreground hover:bg-card-border/40 transition-all shadow-xs cursor-pointer"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -38,6 +38,10 @@ export default async function LoginPage() {
             Sign in with Google
           </button>
         </form>
+
+        <p className="text-center text-[11px] text-muted">
+          Secured by Auth.js & Google OAuth 2.0
+        </p>
       </div>
     </main>
   );

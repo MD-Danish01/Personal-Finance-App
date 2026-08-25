@@ -15,19 +15,19 @@ interface TransactionListProps {
 }
 
 const ICON_BY_CATEGORY: Record<Category, { icon: IconName; bg: string }> = {
-  Food: { icon: "utensils", bg: "bg-brand-orange-soft" },
-  Transport: { icon: "car", bg: "bg-foreground/90 [&_svg]:text-white" },
-  Shopping: { icon: "shopping-cart", bg: "bg-brand-purple-soft" },
-  Entertainment: { icon: "film", bg: "bg-brand-red-soft" },
-  Bills: { icon: "receipt", bg: "bg-brand-red-soft" },
-  Others: { icon: "more", bg: "bg-black/[.04]" },
+  Food: { icon: "utensils", bg: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  Transport: { icon: "car", bg: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
+  Shopping: { icon: "shopping-bag", bg: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
+  Entertainment: { icon: "film", bg: "bg-rose-500/15 text-rose-600 dark:text-rose-400" },
+  Bills: { icon: "receipt", bg: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
+  Others: { icon: "wallet", bg: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
 };
 
 export function TransactionList({ items }: TransactionListProps) {
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-card border border-border/60 divide-y divide-border/60">
+    <div className="overflow-hidden rounded-2xl bg-card shadow-card border border-card-border divide-y divide-card-border transition-colors">
       {items.map((item) => {
-        const iconInfo = ICON_BY_CATEGORY[item.category];
+        const iconInfo = ICON_BY_CATEGORY[item.category] || ICON_BY_CATEGORY.Others;
         return (
           <TransactionRow
             key={item.id}

@@ -12,19 +12,45 @@ import type { InsightsBundle } from "@/lib/types";
 export default function InsightsPage() {
   const [insights, setInsights] = useState<InsightsBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    let ignore = false;
     getInsights()
-      .then(setInsights)
-      .catch((e) => setError(e.response?.data?.error ?? "Failed to load insights"));
-  }, []);
+      .then((data) => {
+        if (!ignore) {
+          setInsights(data);
+          setError(null);
+        }
+      })
+      .catch((e) => {
+        if (!ignore) {
+          setError(e.response?.data?.error ?? "Failed to load insights");
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [refreshKey]);
 
   if (error) {
     return (
       <div className="px-5 pb-4">
         <Header />
-        <Card className="mt-8 p-6 text-center">
-          <p className="text-sm text-muted">{error}</p>
+        <Card className="mt-8 p-6 text-center space-y-3">
+          <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+            <Icon name="alert-triangle" size={24} />
+          </div>
+          <p className="text-sm font-semibold text-foreground">{error}</p>
+          <button
+            type="button"
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+          >
+            <Icon name="refresh-cw" size={14} />
+            Retry
+          </button>
         </Card>
       </div>
     );

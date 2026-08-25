@@ -77,7 +77,8 @@ jobs:
 
             APP_DIR="${{ secrets.EC2_APP_DIR }}"
             APP_DIR="${APP_DIR:-/project/Personal-Finance-App}"
-            mkdir -p "$APP_DIR"
+            sudo mkdir -p "$APP_DIR"
+            sudo chown -R "$(whoami)":"$(whoami)" "$APP_DIR"
             cd "$APP_DIR"
 
             git config --global --add safe.directory "$APP_DIR" || true

@@ -26,6 +26,7 @@ export function ConnectedAccountsCard() {
   const [consent, setConsent] = useState<ConsentData | null>(null);
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [revoking, setRevoking] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -55,9 +56,41 @@ export function ConnectedAccountsCard() {
     };
   }, [refreshTrigger]);
 
+  const handleSync = async () => {
+    if (!consent?.consentId) return;
+
+    try {
+      setSyncing(true);
+      const res = await fetch("/api/setu/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync", consentId: consent.consentId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status) {
+          setConsent((prev) => (prev ? { ...prev, status: data.status } : null));
+        }
+        if (data.accounts) {
+          setAccounts(data.accounts);
+        }
+      }
+    } catch {
+      // Ignore sync error
+    } finally {
+      setSyncing(false);
+      setRefreshTrigger((p) => p + 1);
+    }
+  };
+
   const handleRevoke = async () => {
     if (!consent?.consentId) return;
-    if (!confirm("Are you sure you want to disconnect your bank account? This will revoke live Account Aggregator sync.")) {
+    if (
+      !confirm(
+        "Are you sure you want to disconnect your bank account? This will revoke live Account Aggregator sync.",
+      )
+    ) {
       return;
     }
 
@@ -96,7 +129,8 @@ export function ConnectedAccountsCard() {
     return <ConnectBankCard onConnected={() => setRefreshTrigger((p) => p + 1)} />;
   }
 
-  const isApproved = consent.status === "APPROVED";
+  const isApproved =
+    consent.status === "APPROVED" || consent.status === "ACTIVE";
 
   return (
     <Card className="p-4 space-y-4">
@@ -118,7 +152,7 @@ export function ConnectedAccountsCard() {
               : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
           }`}
         >
-          {consent.status}
+          {isApproved ? "ACTIVE" : consent.status}
         </span>
       </div>
 
@@ -146,10 +180,25 @@ export function ConnectedAccountsCard() {
           ))}
         </div>
       ) : (
-        <div className="p-3 rounded-xl bg-muted-bg text-center">
+        <div className="p-3.5 rounded-xl bg-muted-bg text-center space-y-2.5 border border-card-border">
           <p className="text-xs text-muted">
-            Consent is {consent.status.toLowerCase()}. Accounts will appear once first sync completes.
+            {isApproved
+              ? "Consent approved! Click below to sync and pull your bank statements."
+              : "Consent is pending verification. If you approved it on Setu, click 'Sync Now' to refresh."}
           </p>
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={syncing}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer shadow-xs"
+          >
+            <Icon
+              name="refresh-cw"
+              size={13}
+              className={syncing ? "animate-spin" : ""}
+            />
+            <span>{syncing ? "Syncing with Setu..." : "Sync Now"}</span>
+          </button>
         </div>
       )}
 
@@ -158,15 +207,27 @@ export function ConnectedAccountsCard() {
         <span className="text-[11px] text-muted">
           Consent ID: <span className="font-mono">{consent.consentId.slice(0, 8)}...</span>
         </span>
-        <button
-          type="button"
-          onClick={handleRevoke}
-          disabled={revoking}
-          className="flex items-center gap-1.5 text-[11px] font-semibold text-red-500 hover:text-red-600 dark:text-red-400 cursor-pointer disabled:opacity-50"
-        >
-          <Icon name="trash-2" size={13} />
-          {revoking ? "Revoking..." : "Disconnect"}
-        </button>
+        <div className="flex items-center gap-3">
+          {isApproved && (
+            <button
+              type="button"
+              onClick={handleSync}
+              disabled={syncing}
+              className="text-[11px] font-semibold text-primary hover:underline cursor-pointer disabled:opacity-50"
+            >
+              {syncing ? "Syncing..." : "Sync Data"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleRevoke}
+            disabled={revoking}
+            className="flex items-center gap-1 text-[11px] font-semibold text-red-500 hover:text-red-600 dark:text-red-400 cursor-pointer disabled:opacity-50"
+          >
+            <Icon name="trash-2" size={13} />
+            {revoking ? "Revoking..." : "Disconnect"}
+          </button>
+        </div>
       </div>
     </Card>
   );

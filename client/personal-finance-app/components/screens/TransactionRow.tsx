@@ -34,7 +34,7 @@ export function TransactionRow({
       </div>
       <div className="text-right">
         <div className="text-sm font-semibold text-foreground">
-          -{formatINR(amount)}
+          -{formatINR(amount / 100)}
         </div>
         <div className="text-xs text-muted">{relativeDate}</div>
       </div>

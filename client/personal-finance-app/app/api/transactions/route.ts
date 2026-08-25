@@ -50,8 +50,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { amount, type = "expense", category = "Others", merchant, description, transactionDate } = body;
 
-    // Amount comes in INR (or paise). If number is float/standard INR, convert to integer paise
-    const parsedAmount = typeof amount === "number" ? Math.round(amount * 100) : parseInt(amount, 10);
+    // Amount comes in standard rupees from frontend (e.g., 200 or "200" or 200.50)
+    // Convert to integer paise (1 INR = 100 paise)
+    const rawNumber = typeof amount === "number" ? amount : parseFloat(String(amount).replace(/,/g, ""));
+    const parsedAmount = Math.round(rawNumber * 100);
 
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return NextResponse.json({ error: "Invalid amount. Must be greater than 0." }, { status: 400 });

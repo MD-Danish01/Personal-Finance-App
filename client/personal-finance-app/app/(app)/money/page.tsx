@@ -97,8 +97,8 @@ export default function MoneyPage() {
           <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
             Spending by Category
           </h2>
-          <span className="text-xs font-bold text-foreground">
-            Total: {formatINR(spending.total)}
+          <span className="text-xs font-bold text-foreground font-mono">
+            Total: {formatINR(spending.total / 100)}
           </span>
         </div>
         <Card className="p-4 flex items-center gap-4">
@@ -111,7 +111,7 @@ export default function MoneyPage() {
                 <div key={item.category} className="flex items-center gap-2 text-xs">
                   <CategoryDot colorClass={DOT_COLORS[item.category] || "bg-primary"} size={8} />
                   <span className="flex-1 truncate text-foreground font-medium">{item.category}</span>
-                  <span className="font-bold text-foreground">{formatINR(item.amount)}</span>
+                  <span className="font-bold text-foreground font-mono">{formatINR(item.amount / 100)}</span>
                 </div>
               ))
             )}

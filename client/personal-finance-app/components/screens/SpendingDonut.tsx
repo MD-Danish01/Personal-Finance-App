@@ -61,8 +61,8 @@ export function SpendingDonut({ data, total }: SpendingDonutProps) {
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-bold text-foreground">
-          ₹{total.toLocaleString("en-IN")}
+        <span className="text-lg font-bold text-foreground font-mono">
+          ₹{Math.round(total / 100).toLocaleString("en-IN")}
         </span>
         <span className="text-xs text-muted">Total</span>
       </div>

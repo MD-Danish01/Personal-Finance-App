@@ -29,17 +29,21 @@ export async function POST(req: Request) {
 
     return Response.json(result);
   } catch (error) {
-    console.error("Setu connect error:", error);
-
     const err = error as {
       response?: { status?: number; data?: { errorCode?: string; errorMsg?: string } };
+      message?: string;
     };
 
     const status = err.response?.status ?? 500;
     const errorCode = err.response?.data?.errorCode;
     const errorMsg = err.response?.data?.errorMsg;
 
-    console.error("Setu API response:", { status, errorCode, errorMsg });
+    console.error("Setu connect error:", {
+      status,
+      errorCode,
+      errorMsg,
+      message: err.message,
+    });
 
     return Response.json(
       { error: errorMsg ?? errorCode ?? "Failed to create consent" },

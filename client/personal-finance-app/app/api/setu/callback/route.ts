@@ -27,5 +27,12 @@ export async function GET(req: Request) {
       ? "/money?connected=false"
       : "/money";
 
-  return Response.redirect(new URL(redirectUrl, req.url));
+  const configuredBaseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL;
+  const forwardedProto = req.headers.get("x-forwarded-proto") ?? "https";
+  const forwardedHost =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const baseUrl = configuredBaseUrl ?? `${forwardedProto}://${forwardedHost}`;
+
+  return Response.redirect(new URL(redirectUrl, baseUrl));
 }

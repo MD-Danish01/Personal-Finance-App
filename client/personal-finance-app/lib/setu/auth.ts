@@ -16,8 +16,9 @@ export async function getSetuAccessToken(): Promise<string> {
   const authUrl = process.env.SETU_AUTH_URL;
   const clientId = process.env.SETU_CLIENT_ID;
   const clientSecret = process.env.SETU_CLIENT_SECRET;
+  const productInstanceId = process.env.SETU_PRODUCT_INSTANCE_ID;
 
-  if (!authUrl || !clientId || !clientSecret) {
+  if (!authUrl || !clientId || !clientSecret || !productInstanceId) {
     throw new Error("Setu auth credentials not configured");
   }
 
@@ -39,6 +40,7 @@ export async function getSetuAccessToken(): Promise<string> {
     {
       headers: {
         client: "bridge",
+        "x-product-instance-id": productInstanceId,
         "Content-Type": "application/json",
       },
       timeout: 15000,

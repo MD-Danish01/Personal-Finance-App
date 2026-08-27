@@ -63,34 +63,45 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-55 flex items-center justify-center p-3 sm:p-6 bg-slate-950/65 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
+      {/* Ambient background glows */}
+      <div className="absolute -z-10 h-64 w-64 rounded-full bg-gradient-to-tr from-emerald-500/20 to-indigo-500/20 blur-3xl opacity-50 pointer-events-none" />
+
       <div
-        className="w-full max-w-lg bg-card rounded-t-3xl sm:rounded-3xl border border-card-border p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
+        className="
+          relative w-full max-w-lg overflow-hidden
+          rounded-3xl border border-white/40 dark:border-white/10
+          bg-card/90 dark:bg-card/85 backdrop-blur-2xl
+          p-6 shadow-2xl shadow-indigo-500/10 space-y-5
+          max-h-[90vh] overflow-y-auto
+        "
         onClick={(e) => e.stopPropagation()}
         role="dialog"
+        aria-label="Purchase Simulator"
       >
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary">
-              <Icon name="calculator" size={18} />
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 via-indigo-500/15 to-purple-500/20 text-primary border border-primary/25 shadow-inner">
+              <Icon name="calculator" size={19} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-foreground">
+              <h2 className="text-base font-extrabold tracking-tight text-foreground">
                 &ldquo;Can I Afford This?&rdquo; Simulator
               </h2>
-              <p className="text-xs text-muted">
+              <p className="text-xs font-medium text-muted">
                 Simulate purchase impact on your daily Safe-to-Spend & goals
               </p>
             </div>
           </div>
+
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted-bg text-muted transition-colors cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted hover:bg-muted-bg hover:text-foreground transition-all cursor-pointer"
           >
             <Icon name="x" size={18} />
           </button>
@@ -100,7 +111,7 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
         <form onSubmit={handleSimulate} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
                 Item / Expense Name
               </label>
               <input
@@ -108,16 +119,16 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
                 placeholder="e.g. Wireless Headphones"
-                className="w-full rounded-xl border border-card-border bg-muted-bg px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-medium"
+                className="w-full rounded-xl border border-card-border/90 bg-muted-bg/70 px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
                 Amount (₹)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted">
                   ₹
                 </span>
                 <input
@@ -127,20 +138,20 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="8500"
-                  className="w-full rounded-xl border border-card-border bg-muted-bg pl-7 pr-3.5 py-2.5 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
+                  className="w-full rounded-xl border border-card-border/90 bg-muted-bg/70 pl-7 pr-3.5 py-2.5 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-mono"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1">
+            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
               Category
             </label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-xl border border-card-border bg-muted-bg px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-medium cursor-pointer"
+              className="w-full rounded-xl border border-card-border/90 bg-muted-bg/70 px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-medium cursor-pointer"
             >
               <option value="Shopping">Shopping & Electronics</option>
               <option value="Food">Dining & Food Delivery</option>
@@ -153,25 +164,25 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
 
           {/* Quick amount chips */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            <span className="text-[11px] text-muted shrink-0 font-medium">Quick:</span>
+            <span className="text-[11px] text-muted shrink-0 font-bold">Quick:</span>
             {QUICK_AMOUNTS.map((val) => (
               <button
                 key={val}
                 type="button"
                 onClick={() => setAmount(String(val))}
-                className="px-2.5 py-1 rounded-lg bg-muted-bg border border-card-border text-[11px] font-semibold text-muted hover:text-primary hover:border-primary transition-all shrink-0 cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-card/70 border border-card-border/80 text-[11px] font-semibold text-muted hover:text-primary hover:border-primary transition-all shrink-0 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
               >
                 ₹{val.toLocaleString("en-IN")}
               </button>
             ))}
           </div>
 
-          {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+          {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-primary-hover text-primary-foreground text-xs font-bold hover:opacity-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-primary/20 cursor-pointer active:scale-98"
           >
             <Icon name="sparkles" size={15} />
             <span>{loading ? "Calculating impact..." : "Simulate Impact"}</span>
@@ -183,19 +194,19 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
           <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
             {/* Status Banner */}
             <div
-              className={`p-4 rounded-2xl border ${
+              className={`p-4 rounded-2xl border backdrop-blur-sm ${
                 result.simulation.status === "SAFE"
-                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                  ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
                   : result.simulation.status === "TIGHT"
-                    ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
-                    : "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400"
+                    ? "bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400"
+                    : "bg-red-500/10 border-red-500/25 text-red-600 dark:text-red-400"
               }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider">
                   Feasibility Assessment
                 </span>
-                <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-card shadow-xs">
+                <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-card/90 shadow-2xs border border-current/20">
                   {result.simulation.statusLabel}
                 </span>
               </div>
@@ -203,29 +214,29 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
               {/* Before vs After Metric Comparison */}
               <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-current/15">
                 <div>
-                  <span className="text-[11px] opacity-80 block">Current Daily Safe-to-Spend</span>
-                  <span className="text-lg font-bold font-mono">
+                  <span className="text-[11px] opacity-80 block font-medium">Current Daily Safe-to-Spend</span>
+                  <span className="text-lg font-extrabold font-mono">
                     {formatINR(result.simulation.originalDailySafeToSpend)}
-                    <span className="text-[10px] opacity-75">/day</span>
+                    <span className="text-[10px] opacity-75 font-sans font-normal">/day</span>
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] opacity-80 block">New Safe-to-Spend</span>
+                  <span className="text-[11px] opacity-80 block font-medium">New Safe-to-Spend</span>
                   <span className="text-lg font-extrabold font-mono">
                     {formatINR(result.simulation.newDailySafeToSpend)}
-                    <span className="text-[10px] opacity-75">/day</span>
+                    <span className="text-[10px] opacity-75 font-sans font-normal">/day</span>
                   </span>
                 </div>
               </div>
             </div>
 
             {/* AI Reasoning Block */}
-            <div className="p-4 rounded-2xl bg-muted-bg border border-card-border space-y-2">
+            <div className="p-4 rounded-2xl bg-card/70 dark:bg-card/40 border border-card-border/80 space-y-2 backdrop-blur-sm shadow-2xs">
               <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
                 <Icon name="sparkles" size={14} />
                 <span>Financial Analysis</span>
               </div>
-              <div className="text-xs text-foreground leading-relaxed whitespace-pre-line">
+              <div className="text-xs text-foreground/90 leading-relaxed whitespace-pre-line font-medium">
                 {result.explanation}
               </div>
             </div>

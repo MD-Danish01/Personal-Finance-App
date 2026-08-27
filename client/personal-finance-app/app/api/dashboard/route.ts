@@ -8,6 +8,7 @@ import {
 } from "@/lib/constants";
 
 export async function GET() {
+ 
   const user = await getAuthenticatedUser();
   if (!user) return unauthorizedResponse();
 

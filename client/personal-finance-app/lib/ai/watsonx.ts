@@ -1,4 +1,5 @@
 import axios from "axios";
+import OpenAI from "openai";
 import type { StructuredFinancialContext, PurchaseSimulationResult } from "./context";
 
 const DEFAULT_MODEL = "ibm/granite-3-8b-instruct";
@@ -7,10 +8,59 @@ const WATSONX_PROJECT_ID = process.env.WATSONX_PROJECT_ID;
 const WATSONX_ASSISTANT_ID = process.env.WATSONX_ASSISTANT_ID || process.env.IBM_ASSISTANT_ID;
 const WATSONX_ENVIRONMENT_ID = process.env.WATSONX_ENVIRONMENT_ID || process.env.IBM_ENVIRONMENT_ID || "live";
 const WATSONX_API_KEY = process.env.WATSONX_API_KEY || process.env.IBM_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
+const groqClient = GROQ_API_KEY
+  ? new OpenAI({
+      apiKey: GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+    })
+  : null;
 let cachedIamToken: string | null = null;
 let tokenExpiresAt = 0;
+async function callGroq(prompt: string): Promise<string | null> {
+  if (!groqClient) {
+    console.warn("Groq client is not configured");
+    return null;
+  }
 
+  try {
+    console.log("AI STRATEGY 3: Groq");
+
+    const response = await groqClient.responses.create({
+      model: "openai/gpt-oss-20b",
+      instructions: `
+You are an AI Financial Copilot.
+
+Answer the user's actual question using the verified
+financial context provided in the input.
+
+Rules:
+- Answer the user's question directly.
+- Use exact numbers from the verified context.
+- Never invent financial information.
+- Do not give a generic financial summary unless requested.
+- If information is missing, clearly say so.
+- Give practical and actionable advice.
+- Maximum 3 short paragraphs or 5 bullet points.
+- Use clean Markdown.
+      `.trim(),
+      input: prompt,
+    });
+
+    const result = response.output_text?.trim();
+
+    if (!result) {
+      console.warn("Groq returned an empty response");
+      return null;
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Groq API error:", error);
+    return null;
+  }
+}
 async function getIamToken(): Promise<string | null> {
   if (!WATSONX_API_KEY) return null;
 
@@ -39,13 +89,18 @@ async function getIamToken(): Promise<string | null> {
 }
 
 export async function callWatsonxGranite(prompt: string): Promise<string> {
-  // Strategy 1: watsonx Assistant v2 (if assistant ID is configured)
+  // Strategy 1: watsonx Assistant v2
   if (WATSONX_API_KEY && WATSONX_ASSISTANT_ID) {
     try {
       const baseUrl = WATSONX_URL.replace(/\/$/, "");
-      const assistantEndpoint = `${baseUrl}/v2/assistants/${encodeURIComponent(WATSONX_ASSISTANT_ID)}/environments/${encodeURIComponent(WATSONX_ENVIRONMENT_ID)}/message?version=2024-08-25`;
+      const assistantEndpoint = `${baseUrl}/v2/assistants/${encodeURIComponent(
+        WATSONX_ASSISTANT_ID
+      )}/environments/${encodeURIComponent(
+        WATSONX_ENVIRONMENT_ID
+      )}/message?version=2024-08-25`;
 
       const token = await getIamToken();
+
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -54,7 +109,9 @@ export async function callWatsonxGranite(prompt: string): Promise<string> {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       } else {
-        headers["Authorization"] = `Basic ${Buffer.from(`apikey:${WATSONX_API_KEY}`).toString("base64")}`;
+        headers["Authorization"] = `Basic ${Buffer.from(
+          `apikey:${WATSONX_API_KEY}`
+        ).toString("base64")}`;
       }
 
       const res = await axios.post(
@@ -65,28 +122,36 @@ export async function callWatsonxGranite(prompt: string): Promise<string> {
             text: prompt,
           },
         },
-        { headers, timeout: 15000 },
+        { headers, timeout: 15000 }
       );
 
       const generic = res.data.output?.generic;
+
       if (Array.isArray(generic) && generic.length > 0) {
         const textParts = generic
           .map((item: { text?: string }) => item.text)
           .filter(Boolean);
+
         if (textParts.length > 0) {
           return textParts.join("\n\n").trim();
         }
       }
     } catch (err) {
-      console.warn("watsonx Assistant API call error, trying watsonx.ai:", err);
+      console.warn(
+        "watsonx Assistant API call error, trying watsonx.ai:",
+        err
+      );
     }
   }
 
-  // Strategy 2: watsonx.ai Text Generation (Granite 3.0 / Foundation Model)
+  // Strategy 2: watsonx.ai Granite
   const token = await getIamToken();
+
   if (token && WATSONX_PROJECT_ID) {
     try {
-      const endpoint = `${WATSONX_URL}/ml/v1/text/generation?version=2023-05-29`;
+      const endpoint =
+        `${WATSONX_URL}/ml/v1/text/generation?version=2023-05-29`;
+
       const payload = {
         model_id: DEFAULT_MODEL,
         project_id: WATSONX_PROJECT_ID,
@@ -110,18 +175,35 @@ export async function callWatsonxGranite(prompt: string): Promise<string> {
       });
 
       const generated = res.data.results?.[0]?.generated_text;
-      if (generated && typeof generated === "string" && generated.trim().length > 0) {
+
+      if (
+        generated &&
+        typeof generated === "string" &&
+        generated.trim().length > 0
+      ) {
         return generated.trim();
       }
     } catch (err) {
-      console.warn("watsonx.ai API call error, using grounded synthesizer:", err);
+      console.warn(
+        "watsonx.ai API call error, trying Groq:",
+        err
+      );
     }
   }
 
-  // Resilient fallback generator grounded in real math
+  // Strategy 3: Groq
+  const groqResponse = await callGroq(prompt);
+
+  if (groqResponse) {
+    console.log("Successfully received response from Groq");
+    return groqResponse;
+  }
+
+  console.warn("Groq failed, using grounded fallback");
+
+  // Strategy 4: Local fallback
   return generateGroundedFallback(prompt);
 }
-
 function generateGroundedFallback(prompt: string): string {
   // Extract user question from prompt
   const qMatch = prompt.match(/USER QUESTION:\s*"([^"]+)"/i);

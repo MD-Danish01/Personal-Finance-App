@@ -168,7 +168,7 @@ function Header({ name, onOpenAI }: { name: string; onOpenAI: () => void }) {
     <header className="flex items-center justify-between px-1 py-5">
       <div>
         <h1 className="text-[20px] font-extrabold tracking-tight text-foreground">
-          Good morning, {name || "there"} <span aria-hidden>👋</span>
+          Hi, {name || "there"} <span aria-hidden></span>
         </h1>
         <p className="text-xs text-muted mt-0.5">Here is your financial snapshot for today</p>
       </div>

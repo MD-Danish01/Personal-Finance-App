@@ -22,9 +22,57 @@ const MENU_GAP = 20;
 // New storage key so old broken position doesn't affect this version
 const STORAGE_KEY = "copilot_btn_pos_v2";
 
+// Keep button safely inside viewport
+function getSafePosition(x: number, y: number): Position {
+  const maxX = Math.max(
+    SCREEN_MARGIN,
+    window.innerWidth - BUTTON_WIDTH - SCREEN_MARGIN
+  );
+
+  const maxY = Math.max(
+    SCREEN_MARGIN,
+    window.innerHeight - BUTTON_HEIGHT - SCREEN_MARGIN
+  );
+
+  return {
+    x: Math.max(SCREEN_MARGIN, Math.min(maxX, x)),
+    y: Math.max(SCREEN_MARGIN, Math.min(maxY, y)),
+  };
+}
+
+// Default position: CENTERED ABOVE BOTTOM MENU
+function getDefaultPosition(): Position {
+  const x = (window.innerWidth - BUTTON_WIDTH) / 2;
+
+  const y =
+    window.innerHeight - BUTTON_HEIGHT - BOTTOM_MENU_HEIGHT - MENU_GAP;
+
+  return getSafePosition(x, y);
+}
+
+function getInitialPosition(): Position | null {
+  if (typeof window === "undefined") return null;
+
+  const saved = sessionStorage.getItem(STORAGE_KEY);
+
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+
+      if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+        return getSafePosition(parsed.x, parsed.y);
+      }
+    } catch {
+      // Invalid saved position -> use default
+    }
+  }
+
+  return getDefaultPosition();
+}
+
 export function DraggableChatbotButton() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [position, setPosition] = useState<Position | null>(null);
+  const [position, setPosition] = useState<Position | null>(getInitialPosition);
   const [isDragging, setIsDragging] = useState(false);
 
   const isPointerDownRef = useRef(false);
@@ -40,7 +88,7 @@ export function DraggableChatbotButton() {
     y: 0,
   });
 
-  const positionRef = useRef<Position | null>(null);
+  const positionRef = useRef<Position | null>(position);
 
   const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -50,62 +98,7 @@ export function DraggableChatbotButton() {
     setPosition(newPosition);
   }, []);
 
-  // Keep button safely inside viewport
-  const getSafePosition = useCallback((x: number, y: number): Position => {
-    const maxX = Math.max(
-      SCREEN_MARGIN,
-      window.innerWidth - BUTTON_WIDTH - SCREEN_MARGIN
-    );
-
-    const maxY = Math.max(
-      SCREEN_MARGIN,
-      window.innerHeight - BUTTON_HEIGHT - SCREEN_MARGIN
-    );
-
-    return {
-      x: Math.max(SCREEN_MARGIN, Math.min(maxX, x)),
-      y: Math.max(SCREEN_MARGIN, Math.min(maxY, y)),
-    };
-  }, []);
-
-  // Default position: CENTERED ABOVE BOTTOM MENU
-  const getDefaultPosition = useCallback((): Position => {
-    const x = (window.innerWidth - BUTTON_WIDTH) / 2;
-
-    const y =
-      window.innerHeight -
-      BUTTON_HEIGHT -
-      BOTTOM_MENU_HEIGHT -
-      MENU_GAP;
-
-    return getSafePosition(x, y);
-  }, [getSafePosition]);
-
-  // Initialize position
-  useEffect(() => {
-    const saved = sessionStorage.getItem(STORAGE_KEY);
-
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-
-        if (
-          typeof parsed.x === "number" &&
-          typeof parsed.y === "number"
-        ) {
-          updatePosition(getSafePosition(parsed.x, parsed.y));
-          return;
-        }
-      } catch {
-        // Invalid saved position -> use default
-      }
-    }
-
-    // First time: place above bottom navigation
-    updatePosition(getDefaultPosition());
-  }, [getDefaultPosition, getSafePosition, updatePosition]);
-
-  // Handle resize
+  // Handle resize (legitimate side effect - external event subscription)
   useEffect(() => {
     const handleResize = () => {
       const currentPosition = positionRef.current;
@@ -115,9 +108,7 @@ export function DraggableChatbotButton() {
         return;
       }
 
-      updatePosition(
-        getSafePosition(currentPosition.x, currentPosition.y)
-      );
+      updatePosition(getSafePosition(currentPosition.x, currentPosition.y));
     };
 
     window.addEventListener("resize", handleResize);
@@ -125,11 +116,9 @@ export function DraggableChatbotButton() {
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [getDefaultPosition, getSafePosition, updatePosition]);
+  }, [updatePosition]);
 
-  const handlePointerDown = (
-    e: React.PointerEvent<HTMLDivElement>
-  ) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
     isPointerDownRef.current = true;
@@ -178,12 +167,10 @@ export function DraggableChatbotButton() {
 
       updatePosition(getSafePosition(newX, newY));
     },
-    [getSafePosition, updatePosition]
+    [updatePosition]
   );
 
-  const handlePointerUp = (
-    e: React.PointerEvent<HTMLDivElement>
-  ) => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isPointerDownRef.current) return;
 
     isPointerDownRef.current = false;
@@ -200,10 +187,7 @@ export function DraggableChatbotButton() {
       const currentPosition = positionRef.current;
 
       if (currentPosition) {
-        sessionStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(currentPosition)
-        );
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(currentPosition));
       }
 
       return;
@@ -311,10 +295,7 @@ export function DraggableChatbotButton() {
         </div>
       </div>
 
-      <FinancialAdvisorModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
+      <FinancialAdvisorModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
 }

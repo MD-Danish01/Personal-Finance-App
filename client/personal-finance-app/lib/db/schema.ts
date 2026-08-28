@@ -422,3 +422,61 @@ export const setuWebhookEvents = pgTable("setu_webhook_events", {
     .notNull()
     .defaultNow(),
 });
+
+//persistance chat history
+// db/schema.ts
+
+
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    userId: text("user_id").notNull(),
+
+    title: text("title").notNull().default("New conversation"),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("conversations_user_id_idx").on(table.userId),
+  }),
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, {
+        onDelete: "cascade",
+      }),
+
+    role: text("role").notNull(),
+
+    content: text("content").notNull(),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    conversationIdIdx: index(
+      "messages_conversation_id_idx",
+    ).on(table.conversationId),
+  }),
+);

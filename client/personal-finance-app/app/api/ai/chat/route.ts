@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
 
     const context = await getStructuredFinancialContext(user.id);
     const reply = await askGraniteAdvisor(message.trim(), context);
-
     const suggestedChips = [
       "Can I afford a ₹5,000 purchase?",
       "How to increase my daily Safe-to-Spend?",

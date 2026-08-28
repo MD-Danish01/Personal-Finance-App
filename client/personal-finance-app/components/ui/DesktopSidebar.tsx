@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { Icon } from "@/components/ui/Icon";
-
-type IconName = React.ComponentProps<typeof Icon>["name"];
+import { Icon, type IconName } from "@/components/ui/Icon";
 
 const navigation: { href: string; label: string; icon: IconName }[] = [
   { href: "/home", label: "Home", icon: "home" },
   { href: "/money", label: "Money", icon: "wallet" },
-  { href: "/plan", label: "Plan", icon: "menu" },
+  { href: "/plan", label: "Plan", icon: "plan" },
   { href: "/goals", label: "Goals", icon: "target" },
   { href: "/insights", label: "Insights", icon: "trending-up" },
 ];

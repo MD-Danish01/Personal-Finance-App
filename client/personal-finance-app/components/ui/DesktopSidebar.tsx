@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Icon } from "@/components/ui/Icon";
 
-const navigation = [
+type IconName = React.ComponentProps<typeof Icon>["name"];
+
+const navigation: { href: string; label: string; icon: IconName }[] = [
   { href: "/home", label: "Home", icon: "home" },
   { href: "/money", label: "Money", icon: "wallet" },
   { href: "/plan", label: "Plan", icon: "menu" },
@@ -15,10 +17,8 @@ const navigation = [
 
 export function DesktopSidebar() {
   const pathname = usePathname();
-
   return (
     <aside className="hidden md:flex fixed left-0 top-0 z-50 h-screen w-64 flex-col border-r border-border bg-background/80 backdrop-blur-xl">
-      
       {/* Logo */}
       <div className="flex h-20 items-center gap-3 px-6 border-b border-border">
         <Image
@@ -28,14 +28,9 @@ export function DesktopSidebar() {
           height={42}
           priority
         />
-
         <div>
-          <h2 className="font-bold text-foreground">
-            Spendly
-          </h2>
-          <p className="text-[10px] text-muted">
-            Financial Intelligence
-          </p>
+          <h2 className="font-bold text-foreground">Spendly</h2>
+          <p className="text-[10px] text-muted">Financial Intelligence</p>
         </div>
       </div>
 
@@ -43,7 +38,6 @@ export function DesktopSidebar() {
       <nav className="flex flex-1 flex-col gap-2 p-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
-
           return (
             <Link
               key={item.href}
@@ -54,7 +48,7 @@ export function DesktopSidebar() {
                   : "text-muted hover:bg-muted-bg hover:text-foreground"
               }`}
             >
-              <Icon name={item.icon as any} size={19} />
+              <Icon name={item.icon} size={19} />
               {item.label}
             </Link>
           );

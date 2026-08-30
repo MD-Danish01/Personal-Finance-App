@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { sendVerificationEmail } from "@/lib/email";
 import { eq } from "drizzle-orm";
+import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -124,10 +126,34 @@ export async function POST(req: NextRequest) {
       ]);
     }
 
+    // 5. Generate email verification token (24-hour expiration)
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Delete any previous tokens for this email
+    await db
+      .delete(schema.authVerificationTokens)
+      .where(eq(schema.authVerificationTokens.identifier, cleanEmail));
+
+    await db.insert(schema.authVerificationTokens).values({
+      identifier: cleanEmail,
+      token: verificationToken,
+      expires: expiresAt,
+    });
+
+    // 6. Send verification email via Resend
+    const baseUrl = req.nextUrl.origin;
+    await sendVerificationEmail({
+      to: cleanEmail,
+      name: cleanName,
+      token: verificationToken,
+      baseUrl,
+    });
+
     return NextResponse.json(
       {
         success: true,
-        message: "Account created successfully. You can now sign in.",
+        message: "Account created successfully! Verification email sent.",
         user: {
           id: newUser.id,
           name: newUser.name,

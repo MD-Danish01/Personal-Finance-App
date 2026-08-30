@@ -1,19 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export function AuthForm() {
+  return (
+    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-muted-bg" />}>
+      <AuthFormInner />
+    </Suspense>
+  );
+}
+
+function AuthFormInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const verifiedParam = searchParams.get("verified");
+  const errorParam = searchParams.get("error");
+
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    errorParam === "InvalidOrExpiredToken"
+      ? "Verification link is invalid or expired. Please sign in or request a new link."
+      : errorParam === "TokenExpired"
+      ? "Verification link has expired. Please sign in or request a new link."
+      : errorParam === "InvalidVerificationLink"
+      ? "Invalid verification link."
+      : null,
+  );
+  const [success, setSuccess] = useState<string | null>(
+    verifiedParam === "true"
+      ? "Email verified successfully! You can now sign in."
+      : null,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +71,9 @@ export function AuthForm() {
           throw new Error(data.error || "Failed to create account.");
         }
 
-        setSuccess("Account created! Signing you in...");
+        setSuccess(
+          "Account created! We've sent a verification link to your email. Signing you in...",
+        );
 
         // 2. Automatically sign in with credentials
         const signInRes = await signIn("credentials", {
@@ -57,7 +84,9 @@ export function AuthForm() {
 
         if (signInRes?.error) {
           setTab("signin");
-          setSuccess("Account created successfully! Please sign in.");
+          setSuccess(
+            "Account created! Please check your email for the verification link and sign in.",
+          );
         } else {
           router.push("/home");
           router.refresh();
@@ -124,6 +153,19 @@ export function AuthForm() {
         </button>
       </div>
 
+      {/* Verification alerts */}
+      {success && (
+        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold animate-in fade-in">
+          {success}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium animate-in fade-in">
+          {error}
+        </div>
+      )}
+
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-3.5">
         {tab === "signup" && (
@@ -183,18 +225,6 @@ export function AuthForm() {
           )}
         </div>
 
-        {error && (
-          <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium animate-in fade-in">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium animate-in fade-in">
-            {success}
-          </div>
-        )}
-
         <button
           type="submit"
           disabled={loading}
@@ -205,7 +235,7 @@ export function AuthForm() {
               ? "Creating Account..."
               : "Signing In..."
             : tab === "signup"
-            ? "Create Account"
+            ? "Create Account & Verify"
             : "Sign In"}
         </button>
       </form>

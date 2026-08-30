@@ -19,11 +19,11 @@ export async function sendVerificationEmail({
   token,
   baseUrl,
 }: VerificationEmailParams): Promise<{ success: boolean; error?: string }> {
-  const origin =
-    baseUrl ||
-    process.env.NEXTAUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "https://devforge.danishdev.me";
+  const configuredAppUrl =
+    process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://devforge.danishdev.me";
+
+  const rawOrigin = baseUrl || configuredAppUrl;
+  const origin = rawOrigin.includes("localhost") ? configuredAppUrl : rawOrigin;
 
   const verificationUrl = `${origin.replace(/\/$/, "")}/api/auth/verify?token=${encodeURIComponent(
     token,
@@ -35,7 +35,7 @@ export async function sendVerificationEmail({
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify your email</title>
+  <title>Verify your email - Personal Finance</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0c0e12; color: #f3f4f6; margin: 0; padding: 40px 20px;">
   <div style="max-width: 540px; margin: 0 auto; background-color: #161a22; border: 1px solid #232836; border-radius: 24px; padding: 36px 32px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);">
@@ -75,6 +75,20 @@ export async function sendVerificationEmail({
 </html>
   `;
 
+  const text = `
+Personal Finance Assistant
+
+Verify your email address
+
+Hi ${name || "there"},
+
+Thank you for joining Personal Finance Assistant. Please verify your email address by clicking the link below:
+
+${verificationUrl}
+
+This link will expire in 24 hours. If you did not create an account, you can safely ignore this email.
+  `.trim();
+
   if (!resend) {
     console.log(`[Resend (Dev Mode)]: RESEND_API_KEY not configured. Verification URL for ${to}: ${verificationUrl}`);
     return { success: true };
@@ -86,6 +100,7 @@ export async function sendVerificationEmail({
       to: [to],
       subject: "Verify your email - Personal Finance Assistant",
       html,
+      text,
     });
 
     if (error) {

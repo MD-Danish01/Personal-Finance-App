@@ -12,7 +12,12 @@ async function main() {
   const sql = postgres(url, { max: 1 });
 
   try {
-    console.log("Applying column additions to financial_profiles...");
+    console.log("Applying column additions to user and financial_profiles...");
+
+    await sql`
+      ALTER TABLE "user" 
+      ADD COLUMN IF NOT EXISTS password text;
+    `;
 
     await sql`
       ALTER TABLE financial_profiles 

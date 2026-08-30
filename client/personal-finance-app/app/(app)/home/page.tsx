@@ -245,6 +245,14 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={onOpenAI}
+          aria-label="Ask AI Copilot"
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary hover:scale-105 transition-transform cursor-pointer"
+        >
+          <Icon name="sparkles" size={17} />
+        </button>
         <UserAvatar />
       </div>
     </header>

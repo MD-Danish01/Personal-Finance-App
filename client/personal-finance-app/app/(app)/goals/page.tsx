@@ -70,7 +70,7 @@ export default function GoalsPage() {
           </span>
           <div>
             <h3 className="text-sm font-bold text-foreground">No Goals Created Yet</h3>
-            <p className="mt-1 text-xs text-muted max-w-[260px] mx-auto">
+            <p className="mt-1 text-xs text-muted max-w-65 mx-auto">
               Set clear targets for emergency funds, vacations, gadgets, or investments.
             </p>
           </div>

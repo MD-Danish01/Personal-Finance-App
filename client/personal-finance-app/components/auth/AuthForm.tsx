@@ -25,25 +25,58 @@ function AuthFormInner() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+
+  // States
+  const [isAwaitingVerification, setIsAwaitingVerification] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+
   const [error, setError] = useState<string | null>(
     errorParam === "InvalidOrExpiredToken"
-      ? "Verification link is invalid or expired. Please sign in or request a new link."
+      ? "Verification link is invalid or has expired. Please request a new link."
       : errorParam === "TokenExpired"
-      ? "Verification link has expired. Please sign in or request a new link."
+      ? "Verification link has expired. Please request a new link."
       : errorParam === "InvalidVerificationLink"
       ? "Invalid verification link."
       : null,
   );
   const [success, setSuccess] = useState<string | null>(
     verifiedParam === "true"
-      ? "Email verified successfully! You can now sign in."
+      ? "Email verified successfully! You can now sign in with your password."
       : null,
   );
+
+  const handleResend = async (targetEmail: string) => {
+    if (!targetEmail) return;
+    setResending(true);
+    setResendStatus(null);
+
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to resend verification email.");
+      }
+      setResendStatus("A new verification link has been sent to your email!");
+    } catch (err: unknown) {
+      setResendStatus(err instanceof Error ? err.message : "Failed to resend.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setUnverifiedEmail(null);
+    setResendStatus(null);
 
     if (!email || !password) {
       setError("Please fill in all required fields.");
@@ -59,7 +92,7 @@ function AuthFormInner() {
 
     try {
       if (tab === "signup") {
-        // 1. Call Register API
+        // 1. Sign Up API (Creates user, generates token, sends email)
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -71,26 +104,8 @@ function AuthFormInner() {
           throw new Error(data.error || "Failed to create account.");
         }
 
-        setSuccess(
-          "Account created! We've sent a verification link to your email. Signing you in...",
-        );
-
-        // 2. Automatically sign in with credentials
-        const signInRes = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
-        });
-
-        if (signInRes?.error) {
-          setTab("signin");
-          setSuccess(
-            "Account created! Please check your email for the verification link and sign in.",
-          );
-        } else {
-          router.push("/home");
-          router.refresh();
-        }
+        // 2. Transition to "Check Your Inbox" screen (DO NOT sign in yet)
+        setIsAwaitingVerification(true);
       } else {
         // Sign In Flow
         const signInRes = await signIn("credentials", {
@@ -100,7 +115,18 @@ function AuthFormInner() {
         });
 
         if (signInRes?.error) {
-          setError("Invalid email or password. Please try again.");
+          if (
+            signInRes.code === "EMAIL_NOT_VERIFIED" ||
+            signInRes.error === "EMAIL_NOT_VERIFIED" ||
+            signInRes.error.includes("EMAIL_NOT_VERIFIED")
+          ) {
+            setUnverifiedEmail(email);
+            setError(
+              "Your email is not verified yet. Please click the link sent to your inbox before signing in.",
+            );
+          } else {
+            setError("Invalid email or password. Please check your credentials.");
+          }
         } else {
           router.push("/home");
           router.refresh();
@@ -117,6 +143,56 @@ function AuthFormInner() {
     signIn("google", { callbackUrl: "/home" });
   };
 
+  // View: Awaiting Verification Screen after Sign Up
+  if (isAwaitingVerification) {
+    return (
+      <div className="text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-primary-soft text-3xl shadow-xs">
+          ✉️
+        </div>
+
+        <div className="space-y-1.5">
+          <h2 className="text-xl font-bold text-foreground">Verify your email</h2>
+          <p className="text-xs text-muted leading-relaxed max-w-xs mx-auto">
+            We sent a verification link to{" "}
+            <span className="font-bold text-foreground font-mono">{email}</span>.
+            Please click the link in your inbox to activate your account.
+          </p>
+        </div>
+
+        {resendStatus && (
+          <div className="p-3 rounded-xl bg-primary-soft border border-primary-soft-border text-primary text-xs font-semibold">
+            {resendStatus}
+          </div>
+        )}
+
+        <div className="space-y-2.5 pt-2">
+          <button
+            type="button"
+            onClick={() => handleResend(email)}
+            disabled={resending}
+            className="w-full py-2.5 rounded-xl border border-card-border bg-muted-bg text-xs font-semibold text-foreground hover:bg-card-border/40 disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+          >
+            {resending ? "Sending New Link..." : "Resend Verification Email"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsAwaitingVerification(false);
+              setTab("signin");
+              setError(null);
+              setSuccess("Once verified in your email, sign in below.");
+            }}
+            className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+          >
+            Proceed to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* Tabs */}
@@ -127,6 +203,7 @@ function AuthFormInner() {
             setTab("signin");
             setError(null);
             setSuccess(null);
+            setUnverifiedEmail(null);
           }}
           className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
             tab === "signin"
@@ -142,6 +219,7 @@ function AuthFormInner() {
             setTab("signup");
             setError(null);
             setSuccess(null);
+            setUnverifiedEmail(null);
           }}
           className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
             tab === "signup"
@@ -153,16 +231,33 @@ function AuthFormInner() {
         </button>
       </div>
 
-      {/* Verification alerts */}
+      {/* Verification / Success alerts */}
       {success && (
         <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold animate-in fade-in">
           {success}
         </div>
       )}
 
+      {/* Error & Unverified alert */}
       {error && (
-        <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium animate-in fade-in">
-          {error}
+        <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium space-y-2 animate-in fade-in">
+          <p>{error}</p>
+          {unverifiedEmail && (
+            <button
+              type="button"
+              onClick={() => handleResend(unverifiedEmail)}
+              disabled={resending}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline cursor-pointer"
+            >
+              {resending ? "Sending..." : "Click here to resend verification email"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {resendStatus && (
+        <div className="p-2.5 rounded-xl bg-primary-soft border border-primary-soft-border text-primary text-xs font-semibold animate-in fade-in">
+          {resendStatus}
         </div>
       )}
 
@@ -232,7 +327,7 @@ function AuthFormInner() {
         >
           {loading
             ? tab === "signup"
-              ? "Creating Account..."
+              ? "Sending Verification Link..."
               : "Signing In..."
             : tab === "signup"
             ? "Create Account & Verify"

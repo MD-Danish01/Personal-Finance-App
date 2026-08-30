@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
@@ -11,6 +11,14 @@ import {
 } from "@/lib/db/schema";
 import { verifyPassword } from "@/lib/password";
 import { eq } from "drizzle-orm";
+
+class UnverifiedEmailError extends CredentialsSignin {
+  code = "EMAIL_NOT_VERIFIED";
+}
+
+class InvalidCredentialsError extends CredentialsSignin {
+  code = "INVALID_CREDENTIALS";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -34,26 +42,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = String(credentials.email).toLowerCase().trim();
         const password = String(credentials.password);
 
-        try {
-          const user = await db.query.authUsers.findFirst({
-            where: eq(authUsers.email, email),
-          });
+        const user = await db.query.authUsers.findFirst({
+          where: eq(authUsers.email, email),
+        });
 
-          if (!user || !user.password) return null;
-
-          const isValid = verifyPassword(password, user.password);
-          if (!isValid) return null;
-
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            image: user.image,
-          };
-        } catch (error) {
-          console.error("Credentials authorize error:", error);
-          return null;
+        if (!user || !user.password) {
+          throw new InvalidCredentialsError();
         }
+
+        const isValid = verifyPassword(password, user.password);
+        if (!isValid) {
+          throw new InvalidCredentialsError();
+        }
+
+        // Require email verification before allowing login
+        if (!user.emailVerified) {
+          throw new UnverifiedEmailError();
+        }
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+        };
       },
     }),
   ],

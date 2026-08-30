@@ -7,7 +7,12 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get("token");
   const email = searchParams.get("email");
 
-  const baseUrl = req.nextUrl.origin;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    (req.nextUrl.origin.includes("localhost")
+      ? "https://devforge.danishdev.me"
+      : req.nextUrl.origin);
 
   if (!token || !email) {
     return NextResponse.redirect(`${baseUrl}/login?error=InvalidVerificationLink`);

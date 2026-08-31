@@ -95,6 +95,11 @@ self.addEventListener("fetch", (event) => {
   //
   // Note: localStorage-level caching (lib/cache.ts) handles the React-layer
   // fallback; this SW cache is a second safety net for the fetch layer.
+  //
+  // /api/ping is a connectivity probe — it MUST always bypass the cache so
+  // OfflineProvider gets a real network response, not a cached one.
+  if (url.pathname === "/api/ping") return;
+
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(
       fetch(event.request)

@@ -48,10 +48,11 @@ jobs:
         uses: actions/checkout@v4
 
       # ── 2. Node.js setup ───────────────────────────────────────────────────
+      # @capacitor/cli@8.x requires Node >=22. Using 22 (current LTS).
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: client/personal-finance-app/package-lock.json
 

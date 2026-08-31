@@ -75,8 +75,41 @@ jobs:
               . "$NVM_DIR/nvm.sh"
             fi
 
+            # ── Free up disk space before git operations ──────────────────
+            # Remove npm caches, old Next.js build output, and Docker images
+            # to prevent "No space left on device" failures on the EC2 volume.
+            echo "=== Disk usage before cleanup ==="
+            df -h / || true
+
+            # Remove npm global cache (often the biggest offender)
+            npm cache clean --force 2>/dev/null || true
+
+            # Remove old Next.js build artefacts from previous deploys
             APP_DIR="${{ secrets.EC2_APP_DIR }}"
             APP_DIR="${APP_DIR:-/project/Personal-Finance-App}"
+            if [ -d "$APP_DIR/client/personal-finance-app/.next" ]; then
+              rm -rf "$APP_DIR/client/personal-finance-app/.next"
+            fi
+
+            # Remove stale node_modules (npm ci will reinstall cleanly)
+            if [ -d "$APP_DIR/client/personal-finance-app/node_modules" ]; then
+              rm -rf "$APP_DIR/client/personal-finance-app/node_modules"
+            fi
+
+            # Remove Docker stopped containers and dangling images if Docker is present
+            if command -v docker >/dev/null 2>&1; then
+              docker system prune -f 2>/dev/null || true
+            fi
+
+            # Remove system package caches
+            sudo apt-get clean 2>/dev/null || true
+            sudo rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+            sudo journalctl --vacuum-size=50M 2>/dev/null || true
+
+            echo "=== Disk usage after cleanup ==="
+            df -h / || true
+            # ─────────────────────────────────────────────────────────────
+
             sudo mkdir -p "$APP_DIR"
             sudo chown -R "$(whoami)":"$(whoami)" "$APP_DIR"
             cd "$APP_DIR"
@@ -85,14 +118,18 @@ jobs:
 
             if [ -d .git ]; then
               git remote set-url origin https://github.com/${{ github.repository }}.git 2>/dev/null || true
-              git fetch origin main
+              git fetch --depth=1 origin main
               git reset --hard origin/main
             else
               git init
               git remote add origin https://github.com/${{ github.repository }}.git 2>/dev/null || git remote set-url origin https://github.com/${{ github.repository }}.git
-              git fetch origin main
+              git fetch --depth=1 origin main
               git checkout -f -B main origin/main
             fi
+
+            # Shallow-clone keeps only the latest commit — avoids storing the
+            # entire git history on the EC2 volume.
+            git gc --prune=now --aggressive 2>/dev/null || true
 
             cd client/personal-finance-app
             npm ci --include=dev

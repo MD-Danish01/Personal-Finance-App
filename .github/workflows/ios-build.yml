@@ -87,45 +87,39 @@ jobs:
         run: xcodebuild -version
 
       # ── 7. List Xcode schemes ──────────────────────────────────────────────
-      # Helps diagnose workspace/scheme name if the archive step fails.
+      # Capacitor 6+ uses Swift Package Manager (SPM), NOT CocoaPods.
+      # There is no Podfile / xcworkspace — the project is App.xcodeproj.
+      # SPM packages are resolved automatically by xcodebuild.
       - name: List Xcode schemes
         working-directory: client/personal-finance-app/ios/App
-        run: |
-          xcodebuild -workspace App.xcworkspace -list 2>&1 || \
-          xcodebuild -project App.xcodeproj    -list 2>&1 || \
-          echo "Could not list schemes — check ios/ structure"
+        run: xcodebuild -project App.xcodeproj -list
 
-      # ── 8. Install CocoaPods dependencies ─────────────────────────────────
-      # Capacitor iOS uses CocoaPods for native dependency management.
-      - name: Install CocoaPods
+      # ── 8. Resolve Swift Package Manager dependencies ─────────────────────
+      # Downloads capacitor-swift-pm and any other SPM packages declared in
+      # CapApp-SPM/Package.swift before the archive step.
+      - name: Resolve SPM packages
         working-directory: client/personal-finance-app/ios/App
         run: |
-          gem install cocoapods --no-document 2>/dev/null || true
-          pod install --repo-update
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -resolvePackageDependencies \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm-packages"
 
       # ── 9. Build unsigned Xcode archive ───────────────────────────────────
       # CODE_SIGNING_ALLOWED=NO produces a clean compile check without
       # requiring any signing certificate on the runner.
+      # Uses -project (not -workspace) because Capacitor 6+ is SPM-based.
       - name: Archive (unsigned — compile validation only)
         working-directory: client/personal-finance-app/ios/App
         run: |
           xcodebuild \
-            -workspace App.xcworkspace \
+            -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
             -archivePath "$RUNNER_TEMP/PersonalFinance.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE="" \
-            archive \
-            | xcpretty || xcodebuild \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath "$RUNNER_TEMP/PersonalFinance.xcarchive" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm-packages" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \

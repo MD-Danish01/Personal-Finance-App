@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+tasks.register('testClasses') {
+    group = 'verification'
+    description = 'Compatibility task for Android Studio Gradle run configurations.'
+}
+
 android {
     namespace = "me.danishdev.devforge.personalfinance"
     compileSdk = rootProject.ext.compileSdkVersion

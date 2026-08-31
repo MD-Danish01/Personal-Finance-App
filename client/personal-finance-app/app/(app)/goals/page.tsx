@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getGoals } from "@/lib/api";
-import { formatINR, formatPercent } from "@/lib/format";
+import { formatINR, formatPercent, formatRelativeTime } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -10,10 +10,13 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { GoalCreateModal } from "@/components/ui/GoalCreateModal";
 import { GoalEditModal } from "@/components/ui/GoalEditModal";
 import { GoalContributeModal } from "@/components/ui/GoalContributeModal";
+import { WifiOff } from "lucide-react";
 import type { Goal } from "@/lib/types";
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[] | null>(null);
+  const [fromCache, setFromCache] = useState(false);
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -21,7 +24,12 @@ export default function GoalsPage() {
 
   const loadGoals = useCallback(() => {
     getGoals()
-      .then(setGoals)
+      .then((result) => {
+        setGoals(result.data);
+        setFromCache(result.fromCache);
+        setCachedAt(result.fromCache ? result.cachedAt : null);
+        setError(null);
+      })
       .catch((e) => setError(e.response?.data?.error ?? "Failed to load goals"));
   }, []);
 
@@ -62,6 +70,14 @@ export default function GoalsPage() {
   return (
     <div className="px-5 pb-8">
       <Header onAdd={() => setShowCreate(true)} />
+
+      {/* Stale-data badge */}
+      {fromCache && cachedAt !== null && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          <WifiOff size={13} />
+          <span>Showing offline data — last updated {formatRelativeTime(cachedAt)}</span>
+        </div>
+      )}
 
       {goals.length === 0 ? (
         <Card className="mt-6 p-8 text-center space-y-4">

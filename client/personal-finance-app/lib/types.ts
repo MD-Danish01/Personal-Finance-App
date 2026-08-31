@@ -124,3 +124,18 @@ export interface User {
   name: string;
   email?: string;
 }
+
+/**
+ * Discriminated union returned by every read function in lib/api.ts.
+ *
+ * - fromCache: false  → fresh data from the network (online path)
+ * - fromCache: true   → stale data from localStorage (offline fallback)
+ *
+ * Pages check `result.fromCache` and render the amber "Showing offline data"
+ * badge when true.  cachedAt is the timestamp (Date.now()) of the last
+ * successful network write to localStorage.
+ */
+export type ApiResult<T> =
+  | { data: T; fromCache: false }
+  | { data: T; fromCache: true; cachedAt: number };
+

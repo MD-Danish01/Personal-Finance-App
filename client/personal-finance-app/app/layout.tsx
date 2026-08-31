@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { OfflineProvider } from "@/components/providers/OfflineProvider";
+import { OfflineBanner } from "@/components/ui/OfflineBanner";
+import { ServiceWorkerRegistrar } from "@/components/providers/ServiceWorkerRegistrar";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -22,7 +25,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full bg-background text-foreground transition-colors duration-150">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <OfflineProvider>
+            <ServiceWorkerRegistrar />
+            <OfflineBanner />
+            {children}
+          </OfflineProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

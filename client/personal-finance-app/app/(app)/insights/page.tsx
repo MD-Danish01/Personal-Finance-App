@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { getInsights } from "@/lib/api";
-import { formatPercent } from "@/lib/format";
+import { formatPercent, formatRelativeTime } from "@/lib/format";
 import { InsightCard } from "@/components/screens/InsightCard";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { FinancialAdvisorModal } from "@/components/ai/FinancialAdvisorModal";
 import { PurchaseSimulatorModal } from "@/components/ai/PurchaseSimulatorModal";
+import { WifiOff } from "lucide-react";
 import type { InsightsBundle } from "@/lib/types";
 
 export default function InsightsPage() {
   const [insights, setInsights] = useState<InsightsBundle | null>(null);
+  const [fromCache, setFromCache] = useState(false);
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [advisorOpen, setAdvisorOpen] = useState(false);
@@ -21,9 +24,11 @@ export default function InsightsPage() {
   useEffect(() => {
     let ignore = false;
     getInsights()
-      .then((data) => {
+      .then((result) => {
         if (!ignore) {
-          setInsights(data);
+          setInsights(result.data);
+          setFromCache(result.fromCache);
+          setCachedAt(result.fromCache ? result.cachedAt : null);
           setError(null);
         }
       })
@@ -80,6 +85,14 @@ export default function InsightsPage() {
   return (
     <div className="px-5 pb-8 space-y-6">
       <Header />
+
+      {/* Stale-data badge */}
+      {fromCache && cachedAt !== null && (
+        <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          <WifiOff size={13} />
+          <span>Showing offline data — last updated {formatRelativeTime(cachedAt)}</span>
+        </div>
+      )}
 
       {/* Financial Copilot Hero Card */}
       <Card className="p-5 space-y-3.5 border-card-border bg-card shadow-xs relative overflow-hidden">

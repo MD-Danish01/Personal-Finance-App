@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getPlan } from "@/lib/api";
-import { formatINR } from "@/lib/format";
+import { formatINR, formatRelativeTime } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -13,23 +13,34 @@ import { EmergencyFundCard } from "@/components/ui/EmergencyFundCard";
 import { EditPlanModal } from "@/components/ui/EditPlanModal";
 import { PlanBreakdownRow } from "@/components/screens/PlanBreakdownRow";
 import { InsightCard } from "@/components/screens/InsightCard";
+import { WifiOff } from "lucide-react";
 import type { Plan as PlanType } from "@/lib/types";
 
 export default function PlanPage() {
   const [plan, setPlan] = useState<PlanType | null>(null);
+  const [fromCache, setFromCache] = useState(false);
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
 
   const loadPlan = useCallback(() => {
     setError(null);
     getPlan()
-      .then(setPlan)
+      .then((result) => {
+        setPlan(result.data);
+        setFromCache(result.fromCache);
+        setCachedAt(result.fromCache ? result.cachedAt : null);
+      })
       .catch((e) => setError(e.response?.data?.error ?? "Failed to load plan"));
   }, []);
 
   useEffect(() => {
     getPlan()
-      .then(setPlan)
+      .then((result) => {
+        setPlan(result.data);
+        setFromCache(result.fromCache);
+        setCachedAt(result.fromCache ? result.cachedAt : null);
+      })
       .catch((e) => {
         if (e.response?.status === 404)
           setError("Set your monthly income in Profile to generate your plan.");
@@ -73,6 +84,14 @@ export default function PlanPage() {
   return (
     <div className="px-5 pb-8 space-y-6">
       <Header onEditPlan={() => setEditing(true)} />
+
+      {/* Stale-data badge */}
+      {fromCache && cachedAt !== null && (
+        <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          <WifiOff size={13} />
+          <span>Showing offline data — last updated {formatRelativeTime(cachedAt)}</span>
+        </div>
+      )}
 
       {/* Income overview banner */}
       <Card className="flex items-center gap-3.5 p-4">

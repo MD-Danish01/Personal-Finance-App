@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme (action bar hidden, app manages its own toolbar) -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">#10b981</item>
+        <item name="colorPrimaryDark">#059669</item>
+        <item name="colorAccent">#10b981</item>
+        <item name="android:statusBarColor">#10b981</item>
+        <item name="android:navigationBarColor">#f8fafc</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+    </style>
+
+    <!--
+        Launch / splash theme.
+        Uses the AndroidX SplashScreen API (core-splashscreen).
+        The window background shows the splash.png (brand-coloured canvas with
+        centred logo) while the app is loading.
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <!-- Solid emerald background while app initialises -->
+        <item name="android:windowBackground">@drawable/splash</item>
+        <!-- SplashScreen API: sets the animated icon for Android 12+ splash -->
+        <item name="windowSplashScreenBackground">#10b981</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <!-- Duration the splash stays visible (ms) — 0 hands off immediately -->
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <!-- Post-splash theme applied once the activity is ready -->
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+
+</resources>

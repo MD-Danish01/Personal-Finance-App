@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getRecentTransactions, getSpendingByCategory } from "@/lib/api";
-import { formatINR } from "@/lib/format";
+import { formatINR, formatRelativeTime } from "@/lib/format";
 import { CategoryDot } from "@/components/ui/CategoryDot";
 import { Icon } from "@/components/ui/Icon";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { SpendingDonut } from "@/components/screens/SpendingDonut";
 import { TransactionList } from "@/components/screens/TransactionList";
 import { AddTransactionModal } from "@/components/ui/AddTransactionModal";
+import { WifiOff } from "lucide-react";
 import type { RecentTransactions, SpendingSummary } from "@/lib/types";
 
 const DOT_COLORS: Record<string, string> = {
@@ -24,17 +25,32 @@ const DOT_COLORS: Record<string, string> = {
 export default function MoneyPage() {
   const [spending, setSpending] = useState<SpendingSummary | null>(null);
   const [recent, setRecent] = useState<RecentTransactions | null>(null);
+  const [fromCache, setFromCache] = useState(false);
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const fetchData = useCallback(() => {
     Promise.all([getSpendingByCategory(), getRecentTransactions()])
       .then(([s, r]) => {
-        setSpending(s);
-        setRecent(r);
+        setSpending(s.data);
+        setRecent(r.data);
+        // Show stale badge if either result is from cache
+        const stale = s.fromCache || r.fromCache;
+        setFromCache(stale);
+        setCachedAt(
+          stale
+            ? Math.max(
+                s.fromCache ? s.cachedAt : 0,
+                r.fromCache ? r.cachedAt : 0,
+              )
+            : null,
+        );
         setError(null);
       })
-      .catch((e) => setError(e.response?.data?.error ?? "Failed to load financial records"));
+      .catch((e) =>
+        setError(e.response?.data?.error ?? "Failed to load financial records"),
+      );
   }, []);
 
   useEffect(() => {
@@ -75,6 +91,14 @@ export default function MoneyPage() {
   return (
     <div className="px-5 pb-8 relative">
       <Header onOpenAdd={() => setIsAddOpen(true)} />
+
+      {/* Stale-data badge */}
+      {fromCache && cachedAt !== null && (
+        <div className="mb-3 flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          <WifiOff size={13} />
+          <span>Showing offline data — last updated {formatRelativeTime(cachedAt)}</span>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs font-bold text-foreground px-1 py-1">

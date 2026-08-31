@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Adaptive icon background: emerald-500 to match the app brand -->
+    <color name="ic_launcher_background">#10b981</color>
+</resources>

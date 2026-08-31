@@ -11,10 +11,17 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx scripts/seed-demo-data.ts"
+    "db:seed": "tsx scripts/seed-demo-data.ts",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:build": "npm run build && npm run cap:sync",
+    "gen:android-assets": "node scripts/generate-android-assets.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "axios": "^1.19.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

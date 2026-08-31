@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Night-mode overrides.
+    Keep the splash and status bar brand-coloured in dark mode too.
+    The navigation bar switches to the dark app background (#0f172a slate-900).
+-->
+<resources>
+
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">#10b981</item>
+        <item name="colorPrimaryDark">#059669</item>
+        <item name="colorAccent">#10b981</item>
+        <item name="android:statusBarColor">#10b981</item>
+        <!-- Navigation bar uses dark background in dark mode -->
+        <item name="android:navigationBarColor">#0f172a</item>
+    </style>
+
+</resources>

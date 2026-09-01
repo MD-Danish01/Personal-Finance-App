@@ -63,18 +63,18 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
 
   return (
     <div
-      className="fixed inset-0 z-55 flex items-center justify-center p-3 sm:p-6 bg-slate-950/65 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-55 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
-      {/* Ambient background glows */}
-      <div className="absolute -z-10 h-64 w-64 rounded-full bg-gradient-to-tr from-emerald-500/20 to-indigo-500/20 blur-3xl opacity-50 pointer-events-none" />
+      {/* Ambient background glow */}
+      <div className="absolute -z-10 h-64 w-64 rounded-full bg-primary/20 blur-3xl opacity-50 pointer-events-none" />
 
       <div
         className="
           relative w-full max-w-lg overflow-hidden
-          rounded-3xl border border-white/40 dark:border-white/10
-          bg-card/90 dark:bg-card/85 backdrop-blur-2xl
-          p-6 shadow-2xl shadow-indigo-500/10 space-y-5
+          rounded-3xl border border-card-border
+          bg-card/95 backdrop-blur-2xl text-foreground
+          p-5 sm:p-6 shadow-2xl shadow-black/30 space-y-5
           max-h-[90vh] overflow-y-auto
         "
         onClick={(e) => e.stopPropagation()}
@@ -84,14 +84,14 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 via-indigo-500/15 to-purple-500/20 text-primary border border-primary/25 shadow-inner">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-soft text-primary border border-primary-soft-border shadow-inner">
               <Icon name="calculator" size={19} />
             </div>
             <div>
-              <h2 className="text-base font-extrabold tracking-tight text-foreground">
+              <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-foreground">
                 &ldquo;Can I Afford This?&rdquo; Simulator
               </h2>
-              <p className="text-xs font-medium text-muted">
+              <p className="text-[11px] sm:text-xs font-medium text-muted">
                 Simulate purchase impact on your daily Safe-to-Spend & goals
               </p>
             </div>
@@ -119,7 +119,7 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
                 placeholder="e.g. Wireless Headphones"
-                className="w-full rounded-xl border border-card-border/90 bg-muted-bg/70 px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-medium"
+                className="w-full rounded-xl border border-card-border bg-muted-bg/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-medium"
               />
             </div>
 
@@ -138,7 +138,7 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="8500"
-                  className="w-full rounded-xl border border-card-border/90 bg-muted-bg/70 pl-7 pr-3.5 py-2.5 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-mono"
+                  className="w-full rounded-xl border border-card-border bg-muted-bg/80 pl-7 pr-3.5 py-2.5 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-mono"
                 />
               </div>
             </div>
@@ -151,7 +151,7 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-xl border border-card-border/90 bg-muted-bg/70 px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-medium cursor-pointer"
+              className="w-full rounded-xl border border-card-border bg-muted-bg/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-medium cursor-pointer"
             >
               <option value="Shopping">Shopping & Electronics</option>
               <option value="Food">Dining & Food Delivery</option>
@@ -170,7 +170,7 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
                 key={val}
                 type="button"
                 onClick={() => setAmount(String(val))}
-                className="px-2.5 py-1 rounded-lg bg-card/70 border border-card-border/80 text-[11px] font-semibold text-muted hover:text-primary hover:border-primary transition-all shrink-0 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                className="px-2.5 py-1 rounded-lg bg-muted-bg border border-card-border text-[11px] font-semibold text-muted hover:text-primary hover:border-primary transition-all shrink-0 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
               >
                 ₹{val.toLocaleString("en-IN")}
               </button>
@@ -182,7 +182,7 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-primary-hover text-primary-foreground text-xs font-bold hover:opacity-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-primary/20 cursor-pointer active:scale-98"
+            className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xs shadow-primary/20 cursor-pointer active:scale-98"
           >
             <Icon name="sparkles" size={15} />
             <span>{loading ? "Calculating impact..." : "Simulate Impact"}</span>
@@ -206,7 +206,7 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
                 <span className="text-xs font-bold uppercase tracking-wider">
                   Feasibility Assessment
                 </span>
-                <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-card/90 shadow-2xs border border-current/20">
+                <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-card shadow-2xs border border-current/20">
                   {result.simulation.statusLabel}
                 </span>
               </div>
@@ -215,14 +215,14 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
               <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-current/15">
                 <div>
                   <span className="text-[11px] opacity-80 block font-medium">Current Daily Safe-to-Spend</span>
-                  <span className="text-lg font-extrabold font-mono">
+                  <span className="text-base sm:text-lg font-extrabold font-mono">
                     {formatINR(result.simulation.originalDailySafeToSpend)}
                     <span className="text-[10px] opacity-75 font-sans font-normal">/day</span>
                   </span>
                 </div>
                 <div>
                   <span className="text-[11px] opacity-80 block font-medium">New Safe-to-Spend</span>
-                  <span className="text-lg font-extrabold font-mono">
+                  <span className="text-base sm:text-lg font-extrabold font-mono">
                     {formatINR(result.simulation.newDailySafeToSpend)}
                     <span className="text-[10px] opacity-75 font-sans font-normal">/day</span>
                   </span>
@@ -231,7 +231,7 @@ export function PurchaseSimulatorModal({ open, onClose }: PurchaseSimulatorModal
             </div>
 
             {/* AI Reasoning Block */}
-            <div className="p-4 rounded-2xl bg-card/70 dark:bg-card/40 border border-card-border/80 space-y-2 backdrop-blur-sm shadow-2xs">
+            <div className="p-4 rounded-2xl bg-muted-bg/80 border border-card-border space-y-2 backdrop-blur-sm shadow-2xs">
               <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
                 <Icon name="sparkles" size={14} />
                 <span>Financial Analysis</span>

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowRight,
   ArrowUp,
   Battery,
@@ -14,6 +15,7 @@ import {
   ChevronDown,
   ChevronRight,
   Coffee,
+  Copy,
   CreditCard,
   Ellipsis,
   Film,
@@ -67,6 +69,7 @@ export type IconName =
   | "chevron-down"
   | "arrow-right"
   | "arrow-up"
+  | "arrow-down"
   | "calculator"
   | "plus"
   | "shopping-bag"
@@ -100,7 +103,8 @@ export type IconName =
   | "building"
   | "refresh-cw"
   | "trash-2"
-  | "palette";
+  | "palette"
+  | "copy";
 
 interface IconProps {
   name: IconName;
@@ -128,6 +132,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   "chevron-down": ChevronDown,
   "arrow-right": ArrowRight,
   "arrow-up": ArrowUp,
+  "arrow-down": ArrowDown,
   calculator: Calculator,
   plus: Plus,
   "shopping-bag": ShoppingBag,
@@ -162,6 +167,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   "refresh-cw": RefreshCw,
   "trash-2": Trash2,
   palette: Palette,
+  copy: Copy,
 };
 
 export function Icon({ name, size = 20, className, strokeWidth = 1.8 }: IconProps) {

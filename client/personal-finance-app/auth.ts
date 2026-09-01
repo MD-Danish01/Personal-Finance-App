@@ -11,7 +11,7 @@ import {
 } from "@/lib/db/schema";
 import { verifyPassword } from "@/lib/password";
 import { ensureUserProfileAndPlan } from "@/lib/user-init";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export class UnverifiedEmailError extends CredentialsSignin {
   code = "EMAIL_NOT_VERIFIED";
@@ -35,7 +35,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     process.env.NEXTAUTH_SECRET ||
     "personal-finance-secure-auth-jwt-secret-2026",
   providers: [
-    Google,
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID,
+      clientSecret:
+        process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
+    }),
     Credentials({
       id: "credentials",
       name: "Email and Password",
@@ -83,7 +88,59 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
+      if (account && account.provider !== "credentials" && user.email) {
+        const cleanEmail = user.email.toLowerCase().trim();
+        const existingUser = await db.query.authUsers.findFirst({
+          where: eq(authUsers.email, cleanEmail),
+        });
+
+        if (existingUser) {
+          // Link this OAuth account if not already in accounts table
+          const existingAccount = await db.query.authAccounts.findFirst({
+            where: and(
+              eq(authAccounts.provider, account.provider),
+              eq(authAccounts.providerAccountId, account.providerAccountId),
+            ),
+          });
+
+          if (!existingAccount) {
+            await db
+              .insert(authAccounts)
+              .values({
+                userId: existingUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                refresh_token: account.refresh_token,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+                session_state: (account.session_state as string) || undefined,
+              })
+              .onConflictDoNothing();
+          }
+
+          // Automatically mark email as verified since Google verified it
+          if (!existingUser.emailVerified) {
+            await db
+              .update(authUsers)
+              .set({
+                emailVerified: new Date(),
+                image: existingUser.image || user.image,
+                name: existingUser.name || user.name,
+              })
+              .where(eq(authUsers.id, existingUser.id));
+          }
+
+          user.id = existingUser.id;
+          await ensureUserProfileAndPlan(existingUser.id);
+          return true;
+        }
+      }
+
       if (user?.id) {
         await ensureUserProfileAndPlan(user.id);
       }

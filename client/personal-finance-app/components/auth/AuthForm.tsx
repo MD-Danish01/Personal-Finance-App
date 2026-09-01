@@ -41,6 +41,10 @@ function AuthFormInner() {
       ? "Invalid verification link."
       : errorParam === "VerificationFailed"
       ? "Email verification failed. Please try again."
+      : errorParam === "OAuthAccountNotLinked"
+      ? "An account with this email address already exists. You can sign in with your email and password, or continue with Google."
+      : errorParam === "OAuthCallbackError"
+      ? "Google sign-in was cancelled or failed. Please try again."
       : errorParam === "CredentialsSignin"
       ? "Invalid email or password. Please check your credentials."
       : null,

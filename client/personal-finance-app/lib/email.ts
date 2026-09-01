@@ -19,11 +19,11 @@ export async function sendVerificationEmail({
   token,
   baseUrl,
 }: VerificationEmailParams): Promise<{ success: boolean; error?: string }> {
-  const configuredAppUrl =
-    process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://devforge.danishdev.me";
-
-  const rawOrigin = baseUrl || configuredAppUrl;
-  const origin = rawOrigin.includes("localhost") ? configuredAppUrl : rawOrigin;
+  const origin =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    baseUrl ||
+    "https://devforge.danishdev.me";
 
   const verificationUrl = `${origin.replace(/\/$/, "")}/api/auth/verify?token=${encodeURIComponent(
     token,

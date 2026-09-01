@@ -53,9 +53,7 @@ export async function POST(req: NextRequest) {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
       process.env.NEXTAUTH_URL ||
-      (req.nextUrl.origin.includes("localhost")
-        ? "https://devforge.danishdev.me"
-        : req.nextUrl.origin);
+      req.nextUrl.origin;
 
     await sendVerificationEmail({
       to: cleanEmail,

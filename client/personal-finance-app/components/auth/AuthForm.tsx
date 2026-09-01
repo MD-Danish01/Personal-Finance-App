@@ -39,6 +39,10 @@ function AuthFormInner() {
       ? "Verification link has expired. Please request a new link."
       : errorParam === "InvalidVerificationLink"
       ? "Invalid verification link."
+      : errorParam === "VerificationFailed"
+      ? "Email verification failed. Please try again."
+      : errorParam === "CredentialsSignin"
+      ? "Invalid email or password. Please check your credentials."
       : null,
   );
   const [success, setSuccess] = useState<string | null>(
@@ -78,7 +82,9 @@ function AuthFormInner() {
     setUnverifiedEmail(null);
     setResendStatus(null);
 
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -96,7 +102,7 @@ function AuthFormInner() {
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name: name.trim(), email: cleanEmail, password }),
         });
 
         const data = await res.json();
@@ -109,18 +115,22 @@ function AuthFormInner() {
       } else {
         // Sign In Flow
         const signInRes = await signIn("credentials", {
-          email,
+          email: cleanEmail,
           password,
           redirect: false,
+          callbackUrl: "/home",
         });
 
         if (signInRes?.error) {
+          const errString = String(signInRes.error);
+          const errCode = String(signInRes.code || "");
+
           if (
-            signInRes.code === "EMAIL_NOT_VERIFIED" ||
-            signInRes.error === "EMAIL_NOT_VERIFIED" ||
-            signInRes.error.includes("EMAIL_NOT_VERIFIED")
+            errCode === "EMAIL_NOT_VERIFIED" ||
+            errString === "EMAIL_NOT_VERIFIED" ||
+            errString.includes("EMAIL_NOT_VERIFIED")
           ) {
-            setUnverifiedEmail(email);
+            setUnverifiedEmail(cleanEmail);
             setError(
               "Your email is not verified yet. Please click the link sent to your inbox before signing in.",
             );
@@ -133,14 +143,24 @@ function AuthFormInner() {
         }
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes("EMAIL_NOT_VERIFIED")) {
+        setUnverifiedEmail(cleanEmail);
+        setError(
+          "Your email is not verified yet. Please click the link sent to your inbox before signing in.",
+        );
+      } else if (errMsg.includes("CredentialsSignin") || errMsg.includes("INVALID_CREDENTIALS")) {
+        setError("Invalid email or password. Please check your credentials.");
+      } else {
+        setError(errMsg || "An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl: "/home" });
+    signIn("google", { callbackUrl: "/home", redirectTo: "/home" });
   };
 
   // View: Awaiting Verification Screen after Sign Up

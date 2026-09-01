@@ -10,13 +10,14 @@ import {
   authVerificationTokens,
 } from "@/lib/db/schema";
 import { verifyPassword } from "@/lib/password";
+import { ensureUserProfileAndPlan } from "@/lib/user-init";
 import { eq } from "drizzle-orm";
 
-class UnverifiedEmailError extends CredentialsSignin {
+export class UnverifiedEmailError extends CredentialsSignin {
   code = "EMAIL_NOT_VERIFIED";
 }
 
-class InvalidCredentialsError extends CredentialsSignin {
+export class InvalidCredentialsError extends CredentialsSignin {
   code = "INVALID_CREDENTIALS";
 }
 
@@ -28,6 +29,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     verificationTokensTable: authVerificationTokens,
   }),
   session: { strategy: "jwt" },
+  trustHost: true,
+  secret:
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    "personal-finance-secure-auth-jwt-secret-2026",
   providers: [
     Google,
     Credentials({
@@ -55,7 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new InvalidCredentialsError();
         }
 
-        // Require email verification before allowing login
+        // Require email verification before allowing credentials login
         if (!user.emailVerified) {
           throw new UnverifiedEmailError();
         }
@@ -69,24 +75,48 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    async createUser({ user }) {
+      if (user.id) {
+        await ensureUserProfileAndPlan(user.id);
+      }
+    },
+  },
   callbacks: {
+    async signIn({ user }) {
+      if (user?.id) {
+        await ensureUserProfileAndPlan(user.id);
+      }
+      return true;
+    },
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
       }
       return token;
     },
     session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
+      if (session.user) {
+        if (token.id) {
+          session.user.id = token.id as string;
+        } else if (token.sub) {
+          session.user.id = token.sub;
+        }
+        if (token.email) {
+          session.user.email = token.email as string;
+        }
+        if (token.name) {
+          session.user.name = token.name as string;
+        }
       }
       return session;
-    },
-    authorized({ auth: session }) {
-      return !!session?.user;
     },
   },
   pages: {
     signIn: "/login",
+    error: "/login",
   },
 });

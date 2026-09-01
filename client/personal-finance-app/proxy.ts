@@ -1,10 +1,23 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-const protectedPaths = ["/home", "/money", "/plan", "/goals", "/insights"];
+const protectedPaths = [
+  "/home",
+  "/money",
+  "/plan",
+  "/goals",
+  "/insights",
+  "/profile",
+];
 
-export default auth(async (request) => {
-  const isLoggedIn = !!request.auth?.user;
+export function proxy(request: NextRequest) {
+  const sessionToken =
+    request.cookies.get("authjs.session-token")?.value ||
+    request.cookies.get("__Secure-authjs.session-token")?.value ||
+    request.cookies.get("next-auth.session-token")?.value ||
+    request.cookies.get("__Secure-next-auth.session-token")?.value;
+
+  const isLoggedIn = !!sessionToken;
   const { pathname } = request.nextUrl;
 
   const isProtected = protectedPaths.some(
@@ -22,7 +35,9 @@ export default auth(async (request) => {
   }
 
   return NextResponse.next();
-});
+}
+
+export default proxy;
 
 export const config = {
   matcher: [
@@ -31,6 +46,7 @@ export const config = {
     "/plan/:path*",
     "/goals/:path*",
     "/insights/:path*",
+    "/profile/:path*",
     "/login",
     "/signup",
   ],

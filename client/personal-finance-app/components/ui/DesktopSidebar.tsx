@@ -20,7 +20,7 @@ export function DesktopSidebar() {
       {/* Logo */}
       <div className="flex h-20 items-center gap-3 px-6 border-b border-border">
         <Image
-          src="/app-logo.svg"
+          src="/logo.png"
           alt="Personal Finance"
           width={42}
           height={42}

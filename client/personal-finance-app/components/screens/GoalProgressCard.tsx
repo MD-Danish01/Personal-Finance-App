@@ -16,15 +16,33 @@ export function GoalProgressCard({
   target,
   colorClass,
 }: GoalProgressCardProps) {
-  const pct = target > 0 ? Math.min(Math.round((current / target) * 100), 100) : 0;
+  const pct =
+    target > 0
+      ? Math.min(Math.round((current / target) * 100), 100)
+      : 0;
+
   return (
-    <div className="rounded-2xl bg-card shadow-card border border-card-border p-4 transition-colors">
+    <div className="goal-progress-card group rounded-2xl border border-card-border bg-card p-4 shadow-card">
+      {/* Goal header */}
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted-bg text-2xl shadow-xs" aria-hidden>
+        <span
+          className="goal-progress-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted-bg text-2xl shadow-xs"
+          aria-hidden
+        >
           {icon}
         </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-xs font-bold text-foreground truncate">{name}</div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <div className="truncate text-xs font-bold text-foreground">
+              {name}
+            </div>
+
+            <span className="goal-percent text-[11px] font-bold font-mono text-primary">
+              {formatPercent(pct)}
+            </span>
+          </div>
+
           <div className="mt-2">
             <ProgressBar
               value={current}
@@ -34,11 +52,16 @@ export function GoalProgressCard({
           </div>
         </div>
       </div>
-      <div className="mt-2.5 flex items-center justify-between text-xs pt-1 border-t border-card-border">
-        <span className="text-muted font-mono text-[11px]">
+
+      {/* Goal numbers */}
+      <div className="mt-2.5 flex items-center justify-between border-t border-card-border pt-2.5 text-xs">
+        <span className="text-[11px] font-mono text-muted">
           {formatINR(current / 100)} / {formatINR(target / 100)}
         </span>
-        <span className="font-bold text-primary font-mono">{formatPercent(pct)}</span>
+
+        <span className="goal-status text-[11px] font-semibold text-muted">
+          {pct >= 100 ? "Completed" : "In progress"}
+        </span>
       </div>
     </div>
   );

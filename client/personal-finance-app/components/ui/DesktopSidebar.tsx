@@ -8,10 +8,10 @@ import { Icon } from "@/components/ui/Icon";
 const navigation = [
   { href: "/home", label: "Home", icon: "home" },
   { href: "/money", label: "Money", icon: "wallet" },
-  { href: "/plan", label: "Plan", icon: "menu" },
+  { href: "/plan", label: "Plan", icon: "plan" },
   { href: "/goals", label: "Goals", icon: "target" },
   { href: "/insights", label: "Insights", icon: "trending-up" },
-];
+] as const;
 
 export function DesktopSidebar() {
   const pathname = usePathname();
@@ -54,7 +54,7 @@ export function DesktopSidebar() {
                   : "text-muted hover:bg-muted-bg hover:text-foreground"
               }`}
             >
-              <Icon name={item.icon as any} size={19} />
+              <Icon name={item.icon} size={19} />
               {item.label}
             </Link>
           );
@@ -67,6 +67,7 @@ export function DesktopSidebar() {
           <p className="text-xs font-semibold text-foreground">
             Your money, smarter.
           </p>
+
           <p className="mt-1 text-[10px] text-muted">
             Powered by Financial Copilot
           </p>

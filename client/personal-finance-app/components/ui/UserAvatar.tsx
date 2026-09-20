@@ -7,7 +7,7 @@ interface UserAvatarProps {
   size?: "sm" | "lg";
 }
 
-export function UserAvatar({ size = "sm" }: UserAvatarProps) {
+export function UserAvatar({ size = "lg" }: UserAvatarProps) {
   const { data: session } = useSession();
   const user = session?.user;
   const name = user?.name ?? "User";

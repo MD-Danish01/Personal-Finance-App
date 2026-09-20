@@ -187,6 +187,30 @@ body {
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+@keyframes dashboardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-enter {
+  opacity: 0;
+  animation: dashboardEnter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-enter {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
+}
 
 @layer utilities {
   .text-muted {
@@ -213,6 +237,296 @@ body {
     padding-top: calc(env(safe-area-inset-top, 0px));
   }
 }
+
+  /* Home dashboard presentation */
+  .spendly-home {
+    --home-ink: #142238;
+    max-width: 1180px;
+    margin-inline: auto;
+  }
+
+  .spendly-home > header {
+    animation: home-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .home-greeting {
+    animation: home-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .home-copilot {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 36px;
+    padding: 0.5rem 0.75rem;
+    color: var(--primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+    border-radius: 999px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 11%, white), rgba(255,255,255,.72));
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 10%, transparent);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+    cursor: pointer;
+  }
+
+  .home-copilot:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+
+  .home-copilot-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--primary);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+    animation: home-pulse 2.6s ease-in-out infinite;
+  }
+
+  .home-hero {
+    animation: home-rise-scale 650ms 80ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .home-hero > div {
+    min-height: 210px;
+    border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at 90% 0%, rgba(255,255,255,.26), transparent 34%),
+      linear-gradient(135deg, color-mix(in srgb, var(--primary) 88%, #102039), color-mix(in srgb, var(--primary) 58%, #16223b));
+    box-shadow: 0 22px 44px color-mix(in srgb, var(--primary) 18%, transparent);
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+
+  .home-hero > div::before,
+  .home-hero > div::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 50%;
+    transform: rotate(-10deg);
+    animation: home-wave 11s ease-in-out infinite alternate;
+  }
+
+  .home-hero > div::before {
+    width: 72%;
+    height: 100%;
+    right: -10%;
+    bottom: -58%;
+  }
+
+  .home-hero > div::after {
+    width: 56%;
+    height: 82%;
+    right: 8%;
+    bottom: -50%;
+    animation-delay: -3s;
+  }
+
+  .home-hero > div:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 26px 52px color-mix(in srgb, var(--primary) 25%, transparent);
+  }
+
+  .home-hero .relative.z-10 {
+    display: flex;
+    min-height: 158px;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .home-hero .text-4xl {
+    text-shadow: 0 0 28px rgba(255,255,255,.22);
+    animation: home-amount-glow 4.5s ease-in-out infinite;
+  }
+
+  .home-hero .rounded-full.bg-white\/20 {
+    transition: transform 180ms ease;
+  }
+
+  .home-hero:hover .rounded-full.bg-white\/20 {
+    transform: translateY(-2px) rotate(4deg);
+  }
+
+  .home-budget,
+  .home-goal,
+  .home-guidance {
+    animation: home-rise 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .home-budget { animation-delay: 160ms; }
+  .home-goal { animation-delay: 240ms; }
+  .home-guidance { animation-delay: 320ms; }
+
+  .home-budget > .mb-3,
+  .home-goal > .mb-3,
+  .home-guidance > .mb-3 {
+    min-height: 24px;
+  }
+
+  .home-budget > .mb-3 h2,
+  .home-goal > .mb-3 h2,
+  .home-guidance > .mb-3 h2 {
+    color: color-mix(in srgb, var(--foreground) 62%, var(--muted));
+    letter-spacing: .14em;
+  }
+
+  .home-section-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    transition: gap 180ms ease, color 180ms ease;
+  }
+
+  .home-section-link:hover,
+  .home-ask-copilot:hover {
+    text-decoration: none;
+  }
+
+  .home-section-link:hover {
+    gap: .55rem;
+  }
+
+  .home-budget > div:last-child,
+  .home-goal > div:last-child,
+  .home-guidance > div:last-child {
+    border-radius: 22px;
+  }
+
+  .home-budget > div:last-child {
+    overflow: hidden;
+    background: color-mix(in srgb, var(--card-bg) 90%, var(--primary) 10%);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .06);
+  }
+
+  .home-budget > div:last-child > div {
+    padding-block: 1rem;
+    transition: background-color 180ms ease, transform 180ms ease;
+  }
+
+  .home-budget > div:last-child > div:hover {
+    background: color-mix(in srgb, var(--primary-soft) 52%, transparent);
+  }
+
+  .home-budget > div:last-child > div:nth-child(2) { transition-delay: 40ms; }
+  .home-budget > div:last-child > div:nth-child(3) { transition-delay: 80ms; }
+  .home-budget > div:last-child > div:nth-child(4) { transition-delay: 120ms; }
+
+  .home-budget [role="progressbar"] > div,
+  .home-goal [role="progressbar"] > div {
+    transform-origin: left center;
+    animation: home-progress 900ms 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .home-budget [role="progressbar"] > div {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+
+  .home-goal > div:last-child {
+    min-height: 164px;
+    padding: 1.25rem;
+    background:
+      radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--primary) 17%, transparent), transparent 40%),
+      color-mix(in srgb, var(--card-bg) 94%, var(--primary) 6%);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .06);
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+
+  .home-goal > div:last-child:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+
+  .home-goal > div:last-child > div:first-child > span {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--primary-soft) 78%, white);
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary) 6%, transparent);
+  }
+
+  .home-guidance > div:last-child {
+    position: relative;
+    overflow: hidden;
+    min-height: 104px;
+    padding: 1.25rem;
+    background: linear-gradient(110deg, color-mix(in srgb, var(--primary-soft) 80%, white), color-mix(in srgb, var(--card-bg) 92%, var(--primary) 8%));
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .05);
+  }
+
+  .home-guidance > div:last-child::after {
+    content: "";
+    position: absolute;
+    inset: -80% 45% auto -20%;
+    height: 220%;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 10%, transparent), transparent);
+    transform: rotate(18deg);
+    animation: home-sheen 10s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .home-ask-copilot {
+    transition: transform 180ms ease, gap 180ms ease;
+  }
+
+  .home-ask-copilot:hover {
+    gap: .35rem;
+  }
+
+  @keyframes home-rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes home-rise-scale {
+    from { opacity: 0; transform: translateY(14px) scale(.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes home-pulse {
+    0%, 100% { opacity: .65; transform: scale(.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  @keyframes home-wave {
+    from { transform: translate3d(-2%, 0, 0) rotate(-10deg); }
+    to { transform: translate3d(3%, -3%, 0) rotate(-5deg); }
+  }
+
+  @keyframes home-amount-glow {
+    0%, 100% { text-shadow: 0 0 22px rgba(255,255,255,.16); }
+    50% { text-shadow: 0 0 32px rgba(255,255,255,.32); }
+  }
+
+  @keyframes home-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  @keyframes home-sheen {
+    0%, 48% { transform: translateX(-80%) rotate(18deg); opacity: 0; }
+    58%, 74% { opacity: 1; }
+    100% { transform: translateX(180%) rotate(18deg); opacity: 0; }
+  }
+
+  @media (max-width: 640px) {
+    .spendly-home { padding-inline: 1rem; }
+    .home-hero > div { min-height: 196px; padding: 1.25rem; }
+    .home-hero .relative.z-10 { min-height: 150px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spendly-home *,
+    .spendly-home *::before,
+    .spendly-home *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 .desktop-home-icon {
   display: flex;
 }
@@ -220,5 +534,1351 @@ body {
 @media (max-width: 767px) {
   .desktop-home-icon {
     display: none !important;
+  }
+}
+/* =========================================================
+   SAFE TO SPEND — PREMIUM HERO ANIMATION
+   ========================================================= */
+
+.safe-spend-card {
+  isolation: isolate;
+  transform: translateZ(0);
+  transition:
+    transform 450ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.safe-spend-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.12),
+    0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+
+/* ---------------- AMBIENT GLOW ---------------- */
+
+.safe-spend-glow {
+  will-change: transform;
+}
+
+.safe-spend-glow-one {
+  animation: safeSpendGlowOne 9s ease-in-out infinite;
+}
+
+.safe-spend-glow-two {
+  animation: safeSpendGlowTwo 11s ease-in-out infinite;
+}
+
+@keyframes safeSpendGlowOne {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: translate3d(-22px, 18px, 0) scale(1.15);
+    opacity: 0.8;
+  }
+}
+
+@keyframes safeSpendGlowTwo {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.35;
+  }
+
+  50% {
+    transform: translate3d(28px, -18px, 0) scale(1.1);
+    opacity: 0.55;
+  }
+}
+
+
+/* ---------------- MOVING LIGHT ---------------- */
+
+.safe-spend-shine {
+  background:
+    linear-gradient(
+      115deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.055) 45%,
+      rgba(255, 255, 255, 0.09) 50%,
+      rgba(255, 255, 255, 0.055) 55%,
+      transparent 75%
+    );
+
+  transform: translateX(-120%);
+  animation: safeSpendShine 8s ease-in-out infinite;
+}
+
+@keyframes safeSpendShine {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+
+  75%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+
+/* ---------------- ICON ---------------- */
+
+.safe-spend-icon {
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 350ms ease;
+}
+
+.safe-spend-card:hover .safe-spend-icon {
+  transform: rotate(6deg) scale(1.08);
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+
+/* ---------------- AMOUNT ---------------- */
+
+.safe-spend-amount {
+  animation: safeSpendAmount 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes safeSpendAmount {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ---------------- SUBTITLE ---------------- */
+
+.safe-spend-subtitle {
+  animation: safeSpendSubtitle 800ms 120ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+@keyframes safeSpendSubtitle {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 0.9;
+    transform: translateY(0);
+  }
+}
+
+
+/* ---------------- REDUCED MOTION ---------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .safe-spend-card,
+  .safe-spend-icon {
+    transition: none;
+  }
+
+  .safe-spend-glow-one,
+  .safe-spend-glow-two,
+  .safe-spend-shine,
+  .safe-spend-amount,
+  .safe-spend-subtitle {
+    animation: none;
+  }
+
+  .safe-spend-amount,
+  .safe-spend-subtitle {
+    opacity: 1;
+    transform: none;
+  }
+
+  .safe-spend-card:hover {
+    transform: none;
+  }
+}
+/* =========================================================
+   MONTH OVERVIEW
+   ========================================================= */
+
+.month-overview-list {
+  transform: translateZ(0);
+}
+
+/* Individual rows enter one after another */
+.month-overview-row {
+  opacity: 0;
+  animation: budgetRowEnter 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes budgetRowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Goal badge */
+.month-goal-badge {
+  transition:
+    transform 250ms ease,
+    background-color 250ms ease;
+}
+
+.month-overview-row:hover .month-goal-badge {
+  transform: translateY(-1px);
+}
+
+/* Bottom link */
+.month-overview-link {
+  border-top: 1px solid transparent;
+}
+
+.month-overview-link:hover {
+  border-top-color: var(--card-border);
+}
+
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .month-overview-row {
+    opacity: 1;
+    animation: none;
+  }
+
+  .month-overview-row,
+  .month-overview-row span,
+  .month-goal-badge,
+  .month-overview-link,
+  .month-overview-link span {
+    transition: none;
+  }
+}
+/* =========================================================
+   PROGRESS BAR ANIMATION
+   ========================================================= */
+
+.progress-bar-fill {
+  position: relative;
+  transform-origin: left center;
+
+  transition:
+    width 1200ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 300ms ease;
+
+  animation: progressBarEnter 900ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+@keyframes progressBarEnter {
+  from {
+    transform: scaleX(0);
+    opacity: 0.65;
+  }
+
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* Very subtle shine travelling across the filled bar */
+.progress-bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.25),
+    transparent
+  );
+
+  transform: translateX(-100%);
+  animation: progressShine 3.5s ease-in-out 1.2s infinite;
+}
+
+@keyframes progressShine {
+  0%,
+  60% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Slightly brighter when the budget row is hovered */
+.month-overview-row:hover .progress-bar-fill {
+  filter: brightness(1.06);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar-fill {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+
+  .progress-bar-fill::after {
+    animation: none;
+  }
+}
+/* =========================================================
+   PRIORITY GOAL CARD
+   ========================================================= */
+
+.goal-progress-card {
+  transform: translateZ(0);
+
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms ease;
+
+  animation: goalCardEnter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes goalCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.goal-progress-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.07),
+    0 3px 10px rgba(0, 0, 0, 0.04);
+}
+
+
+/* Goal icon */
+
+.goal-progress-icon {
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease;
+}
+
+.goal-progress-card:hover .goal-progress-icon {
+  transform: translateY(-2px) scale(1.05) rotate(-2deg);
+
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+
+/* Percentage */
+
+.goal-percent {
+  transition:
+    transform 300ms ease,
+    opacity 300ms ease;
+}
+
+.goal-progress-card:hover .goal-percent {
+  transform: scale(1.05);
+}
+
+
+/* Status */
+
+.goal-status {
+  transition:
+    transform 300ms ease,
+    color 300ms ease;
+}
+
+.goal-progress-card:hover .goal-status {
+  transform: translateX(-2px);
+}
+
+
+/* Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-progress-card {
+    animation: none;
+    transition: none;
+  }
+
+  .goal-progress-icon,
+  .goal-percent,
+  .goal-status {
+    transition: none;
+  }
+
+  .goal-progress-card:hover {
+    transform: none;
+  }
+}
+/* =========================================================
+   DAILY GUIDANCE / AI INSIGHT
+   ========================================================= */
+
+.insight-card {
+  transform: translateZ(0);
+
+  animation: insightEnter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms ease;
+}
+
+@keyframes insightEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Hover */
+
+.insight-block:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.06),
+    0 3px 10px rgba(0, 0, 0, 0.035);
+}
+
+.insight-row:hover {
+  transform: translateX(2px);
+}
+
+
+/* Sparkle icon */
+
+.insight-icon {
+  display: inline-flex;
+  transform-origin: center;
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 300ms ease;
+}
+
+.insight-card:hover .insight-icon {
+  transform: rotate(10deg) scale(1.1);
+  filter: brightness(1.08);
+}
+
+
+/* Chevron */
+
+.insight-chevron {
+  display: inline-flex;
+  transition:
+    transform 300ms ease,
+    opacity 300ms ease;
+}
+
+.insight-row:hover .insight-chevron {
+  transform: translateX(3px);
+  opacity: 1;
+}
+
+
+/* AI glow */
+
+.insight-glow {
+  animation: insightGlow 7s ease-in-out infinite;
+}
+
+@keyframes insightGlow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.25;
+  }
+
+  50% {
+    transform: translate3d(-10px, 10px, 0) scale(1.15);
+    opacity: 0.45;
+  }
+}
+
+
+/* Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .insight-card {
+    animation: none;
+    transition: none;
+  }
+
+  .insight-icon,
+  .insight-chevron {
+    transition: none;
+  }
+
+  .insight-glow {
+    animation: none;
+  }
+
+  .insight-card:hover,
+  .insight-row:hover {
+    transform: none;
+  }
+}
+/* =========================================================
+   MONTH SPENDING FOOTER
+   ========================================================= */
+
+.home-month-spent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 18px;
+  padding-bottom: 8px;
+}
+
+.home-month-spent-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.45;
+
+  animation: spendingDotPulse 3s ease-in-out infinite;
+}
+
+@keyframes spendingDotPulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-month-spent-dot {
+    animation: none;
+  }
+}
+/* =========================================================
+   HOME DASHBOARD SPACING
+   ========================================================= */
+
+.home-dashboard {
+  padding-bottom: 10px;
+}
+
+.home-dashboard .home-hero {
+  margin-top: 2px;
+}
+
+.home-dashboard .home-guidance {
+  margin-top: 24px;
+}
+
+.home-dashboard .home-budget,
+.home-dashboard .home-goal {
+  min-width: 0;
+}
+
+
+/* Desktop breathing room */
+
+@media (min-width: 1024px) {
+  .home-dashboard {
+    padding-bottom: 24px;
+  }
+
+  .home-dashboard .home-guidance {
+    margin-top: 28px;
+  }
+}
+
+
+/* Mobile */
+
+@media (max-width: 639px) {
+  .home-dashboard .home-guidance {
+    margin-top: 20px;
+  }
+}
+/* =========================================================
+   INSIGHTS PAGE
+   ========================================================= */
+
+.insights-page {
+  padding-bottom: 24px;
+}
+
+
+/* Copilot */
+
+.insights-copilot {
+  transform: translateZ(0);
+}
+
+.insights-copilot-glow {
+  animation: insightsCopilotGlow 8s ease-in-out infinite;
+}
+
+@keyframes insightsCopilotGlow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.35;
+  }
+
+  50% {
+    transform: translate3d(-18px, 16px, 0) scale(1.15);
+    opacity: 0.65;
+  }
+}
+
+.insights-sparkle {
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease;
+}
+
+.insights-copilot:hover .insights-sparkle {
+  transform: rotate(8deg) scale(1.06);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+}
+
+
+/* Buttons */
+
+.insights-primary-button,
+.insights-secondary-button {
+  transition:
+    transform 250ms ease,
+    opacity 250ms ease,
+    box-shadow 250ms ease,
+    background-color 250ms ease;
+}
+
+.insights-primary-button:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.09);
+}
+
+.insights-secondary-button:hover {
+  transform: translateY(-1px);
+  background-color: var(--card-border);
+}
+
+
+/* KPI cards */
+
+.insights-kpi {
+  opacity: 0;
+  animation: insightsKpiEnter 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms ease;
+}
+
+@keyframes insightsKpiEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.insights-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.06),
+    0 3px 10px rgba(0, 0, 0, 0.035);
+}
+
+.insights-kpi-icon {
+  transition:
+    transform 300ms ease,
+    filter 300ms ease;
+}
+
+.insights-kpi:hover .insights-kpi-icon {
+  transform: scale(1.12) rotate(5deg);
+  filter: brightness(1.08);
+}
+
+.insights-kpi-value {
+  transition: transform 300ms ease;
+}
+
+.insights-kpi:hover .insights-kpi-value {
+  transform: translateX(1px);
+}
+
+
+/* Live signals */
+
+.insights-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: insightsLivePulse 2.2s ease-in-out infinite;
+}
+
+@keyframes insightsLivePulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+
+/* Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .insights-copilot-glow,
+  .insights-live-dot {
+    animation: none;
+  }
+
+  .insights-kpi {
+    animation: none;
+    opacity: 1;
+    transition: none;
+  }
+
+  .insights-sparkle,
+  .insights-primary-button,
+  .insights-secondary-button,
+  .insights-kpi-icon,
+  .insights-kpi-value {
+    transition: none;
+  }
+
+  .insights-kpi:hover {
+    transform: none;
+  }
+}
+/* =========================================================
+   INSIGHTS PAGE
+   ========================================================= */
+
+.insights-page {
+  padding-bottom: 24px;
+}
+
+
+/* =========================================================
+   COPILOT
+   ========================================================= */
+
+.insights-copilot {
+  transform: translateZ(0);
+}
+
+.insights-copilot-glow {
+  animation: insightsCopilotGlow 8s ease-in-out infinite;
+}
+
+@keyframes insightsCopilotGlow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.35;
+  }
+
+  50% {
+    transform: translate3d(-18px, 16px, 0) scale(1.15);
+    opacity: 0.65;
+  }
+}
+
+.insights-sparkle {
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease;
+}
+
+.insights-copilot:hover .insights-sparkle {
+  transform: rotate(8deg) scale(1.06);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.insights-primary-button,
+.insights-secondary-button {
+  transition:
+    transform 250ms ease,
+    opacity 250ms ease,
+    box-shadow 250ms ease,
+    background-color 250ms ease;
+}
+
+.insights-primary-button:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.09);
+}
+
+.insights-secondary-button:hover {
+  transform: translateY(-1px);
+  background-color: var(--card-border);
+}
+
+
+/* =========================================================
+   KPI CARDS
+   ========================================================= */
+
+/*
+  Entrance animation is handled by the
+  .dashboard-enter wrapper in InsightsPage.tsx.
+  Keeping animation here would cause double animation.
+*/
+
+.insights-kpi {
+  transform: translateZ(0);
+
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms ease;
+}
+
+.insights-kpi:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.06),
+    0 3px 10px rgba(0, 0, 0, 0.035);
+}
+
+.insights-kpi-icon {
+  transition:
+    transform 300ms ease,
+    filter 300ms ease;
+}
+
+.insights-kpi:hover .insights-kpi-icon {
+  transform: scale(1.12) rotate(5deg);
+  filter: brightness(1.08);
+}
+
+.insights-kpi-value {
+  transition: transform 300ms ease;
+}
+
+.insights-kpi:hover .insights-kpi-value {
+  transform: translateX(1px);
+}
+
+
+/* =========================================================
+   LIVE SIGNALS
+   ========================================================= */
+
+.insights-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: currentColor;
+
+  animation: insightsLivePulse 2.2s ease-in-out infinite;
+}
+
+@keyframes insightsLivePulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .insights-copilot-glow,
+  .insights-live-dot {
+    animation: none;
+  }
+
+  .insights-kpi {
+    transition: none;
+  }
+
+  .insights-sparkle,
+  .insights-primary-button,
+  .insights-secondary-button,
+  .insights-kpi-icon,
+  .insights-kpi-value {
+    transition: none;
+  }
+
+  .insights-kpi:hover {
+    transform: none;
+  }
+}
+/* =========================================================
+   MONEY & CASHFLOW
+   ========================================================= */
+
+.money-page {
+  padding-bottom: 24px;
+}
+
+
+/* =========================================================
+   HEADER ADD BUTTON
+   ========================================================= */
+
+.money-header-add {
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease;
+}
+
+.money-header-add:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.08);
+}
+
+
+/* =========================================================
+   MONTH BAR
+   ========================================================= */
+
+.money-month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.money-add-button {
+  transition:
+    transform 250ms ease,
+    opacity 250ms ease,
+    box-shadow 250ms ease;
+}
+
+.money-add-button:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.09);
+}
+
+
+/* =========================================================
+   SPENDING CARD
+   ========================================================= */
+
+.money-spending-card {
+  transform: translateZ(0);
+
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 400ms ease;
+}
+
+.money-spending-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.06),
+    0 3px 10px rgba(0, 0, 0, 0.035);
+}
+
+
+/* =========================================================
+   DONUT
+   ========================================================= */
+
+.money-donut {
+  transition:
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 400ms ease;
+}
+
+.money-spending-card:hover .money-donut {
+  transform: scale(1.025);
+  filter: brightness(1.03);
+}
+
+
+/* =========================================================
+   CATEGORY ROWS
+   ========================================================= */
+
+.money-category-row {
+  opacity: 0;
+
+  animation: moneyCategoryEnter 550ms
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  transition:
+    transform 250ms ease,
+    opacity 250ms ease;
+}
+
+.money-category-row:hover {
+  transform: translateX(3px);
+}
+
+@keyframes moneyCategoryEnter {
+  from {
+    opacity: 0;
+    transform: translateX(7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+/* =========================================================
+   TRANSACTIONS
+   ========================================================= */
+
+.money-transactions {
+  animation: moneyTransactionsEnter 650ms
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes moneyTransactionsEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.money-empty-card {
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms ease;
+}
+
+.money-empty-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.06),
+    0 3px 10px rgba(0, 0, 0, 0.035);
+}
+
+.money-first-transaction {
+  transition:
+    transform 250ms ease,
+    box-shadow 250ms ease,
+    opacity 250ms ease;
+}
+
+.money-first-transaction:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.09);
+}
+
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.money-error-card {
+  animation: moneyTransactionsEnter 500ms
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .money-header-add,
+  .money-add-button,
+  .money-spending-card,
+  .money-donut,
+  .money-category-row,
+  .money-transactions,
+  .money-empty-card,
+  .money-first-transaction {
+    transition: none;
+    animation: none;
+  }
+
+  .money-category-row {
+    opacity: 1;
+  }
+
+  .money-spending-card:hover,
+  .money-empty-card:hover {
+    transform: none;
+  }
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .money-spending-card {
+    gap: 12px;
+  }
+
+  .money-month-bar {
+    gap: 8px;
+  }
+
+  .money-add-button {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+/* =========================
+   Spending Donut
+   ========================= */
+
+.spending-donut {
+  transform: translateZ(0);
+  transition:
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 400ms ease;
+}
+
+.spending-donut:hover {
+  transform: translateZ(0) scale(1.035);
+  filter: brightness(1.025);
+}
+
+.spending-donut-svg {
+  overflow: visible;
+}
+
+.spending-donut-track {
+  opacity: 0.9;
+}
+
+.spending-donut-slice {
+  transform-origin: 50% 50%;
+  animation:
+    spendingDonutDraw
+    1100ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+
+  transition:
+    stroke-width 300ms ease,
+    filter 300ms ease;
+}
+
+.spending-donut:hover .spending-donut-slice {
+  stroke-width: 19px;
+  filter: brightness(1.05);
+}
+
+@keyframes spendingDonutDraw {
+  from {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.spending-donut-center {
+  pointer-events: none;
+  animation: spendingDonutCenterEnter 700ms 250ms
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes spendingDonutCenterEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.spending-donut-total {
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms ease;
+}
+
+.spending-donut:hover .spending-donut-total {
+  transform: scale(1.04);
+}
+
+.spending-donut-label {
+  transition: opacity 300ms ease;
+}
+
+.spending-donut:hover .spending-donut-label {
+  opacity: 0.75;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .spending-donut,
+  .spending-donut-slice,
+  .spending-donut-total,
+  .spending-donut-label {
+    transition: none;
+  }
+
+  .spending-donut-slice,
+  .spending-donut-center {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .spending-donut:hover {
+    transform: none;
+    filter: none;
+  }
+
+  .spending-donut:hover .spending-donut-slice {
+    stroke-width: 18px;
+    filter: none;
+  }
+
+  .spending-donut:hover .spending-donut-total {
+    transform: none;
+  }
+}
+/* =========================
+   Transaction List
+   ========================= */
+
+.transaction-list {
+  transform: translateZ(0);
+}
+
+.transaction-list-row {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: transactionRowEnter
+    600ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+
+  transition:
+    background-color 250ms ease,
+    transform 250ms ease;
+}
+
+.transaction-list-row:hover {
+  background-color: var(--muted-bg);
+}
+
+/* Subtle row entrance */
+@keyframes transactionRowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Keep the final row position stable */
+.transaction-list-row > * {
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms ease;
+}
+
+.transaction-list-row:hover > * {
+  transform: translateX(3px);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .transaction-list-row,
+  .transaction-list-row > * {
+    animation: none;
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .transaction-list-row:hover {
+    background-color: transparent;
   }
 }

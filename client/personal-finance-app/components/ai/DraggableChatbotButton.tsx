@@ -81,30 +81,36 @@ export function DraggableChatbotButton() {
     return getSafePosition(x, y);
   }, [getSafePosition]);
 
-  // Initialize position
+    // Initialize position
   useEffect(() => {
     const saved = sessionStorage.getItem(STORAGE_KEY);
 
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
+    const initializePosition = () => {
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
 
-        if (
-          typeof parsed.x === "number" &&
-          typeof parsed.y === "number"
-        ) {
-          updatePosition(getSafePosition(parsed.x, parsed.y));
-          return;
+          if (
+            typeof parsed.x === "number" &&
+            typeof parsed.y === "number"
+          ) {
+            updatePosition(getSafePosition(parsed.x, parsed.y));
+            return;
+          }
+        } catch {
+          // Invalid saved position -> use default
         }
-      } catch {
-        // Invalid saved position -> use default
       }
-    }
 
-    // First time: place above bottom navigation
-    updatePosition(getDefaultPosition());
+      // First time: place above bottom navigation
+      updatePosition(getDefaultPosition());
+    };
+
+    // Run after the effect has completed
+    const frame = requestAnimationFrame(initializePosition);
+
+    return () => cancelAnimationFrame(frame);
   }, [getDefaultPosition, getSafePosition, updatePosition]);
-
   // Handle resize
   useEffect(() => {
     const handleResize = () => {

@@ -23,7 +23,7 @@ export default function HomePage() {
     let ignore = false;
 
     getDashboard()
-      .then((data) => {
+      .then(({ data }) => {
         if (!ignore) {
           setDashboard(data);
           setError(null);

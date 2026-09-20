@@ -30,8 +30,8 @@ export default function MoneyPage() {
   const fetchData = useCallback(() => {
     Promise.all([getSpendingByCategory(), getRecentTransactions()])
       .then(([s, r]) => {
-        setSpending(s);
-        setRecent(r);
+        setSpending(s.data);
+        setRecent(r.data);
         setError(null);
       })
       .catch((e) =>

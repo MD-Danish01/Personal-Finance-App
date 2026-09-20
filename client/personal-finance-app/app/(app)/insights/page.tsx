@@ -22,7 +22,7 @@ export default function InsightsPage() {
     let ignore = false;
 
     getInsights()
-      .then((data) => {
+      .then(({ data }) => {
         if (!ignore) {
           setInsights(data);
           setError(null);

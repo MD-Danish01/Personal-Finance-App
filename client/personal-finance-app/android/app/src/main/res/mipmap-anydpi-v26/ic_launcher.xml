@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Solid emerald brand colour background -->
+    <background android:drawable="@color/ic_launcher_background"/>
+    <!-- Foreground: PNG generated from public/logo.png via generate-android-assets.mjs -->
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>

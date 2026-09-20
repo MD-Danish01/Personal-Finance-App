@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# -- Capacitor iOS ----------------------------------------------------------
+# Keep the ios/ Xcode project (needed by Xcode + GitHub Actions macOS runner).
+# Exclude only generated/derived build artefacts.
+
+ios/App/DerivedData/
+ios/App/build/
+ios/.build/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+ios/App/App.xcworkspace/xcuserdata/
+**/*.xcuserstate
+ios/App/Pods/
+*.mobileprovision
+*.p12
+*.p8
+ExportOptions.plist

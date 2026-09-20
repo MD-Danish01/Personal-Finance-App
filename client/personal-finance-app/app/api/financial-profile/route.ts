@@ -27,6 +27,7 @@ export async function PUT(req: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorizedResponse();
 
+return db.transaction(async (tx) => {
   try {
     const body = await req.json();
     const { monthlyIncome } = body;
@@ -47,7 +48,7 @@ export async function PUT(req: Request) {
     const curMonth = now.getMonth() + 1;
     const curYear = now.getFullYear();
 
-    const existing = await db.query.financialProfiles.findFirst({
+    const existing = await tx.query.financialProfiles.findFirst({
       where: eq(schema.financialProfiles.userId, user.id),
     });
 
@@ -65,7 +66,7 @@ export async function PUT(req: Request) {
     let profileRecord;
 
     if (existing) {
-      const [updated] = await db
+      const [updated] = await tx
         .update(schema.financialProfiles)
         .set({
           monthlyIncome: incomePaise,
@@ -76,7 +77,7 @@ export async function PUT(req: Request) {
         .returning();
       profileRecord = updated;
     } else {
-      const [created] = await db
+      const [created] = await tx
         .insert(schema.financialProfiles)
         .values({
           userId: user.id,
@@ -88,7 +89,7 @@ export async function PUT(req: Request) {
     }
 
     // Synchronize or create the active plan for the current month with new income
-    const activePlan = await db.query.plans.findFirst({
+    const activePlan = await tx.query.plans.findFirst({
       where: and(
         eq(schema.plans.userId, user.id),
         eq(schema.plans.month, curMonth),
@@ -103,7 +104,7 @@ export async function PUT(req: Request) {
 
     if (activePlan) {
       // Update plan's monthlyIncome
-      await db
+      await tx
         .update(schema.plans)
         .set({
           monthlyIncome: incomePaise,
@@ -112,13 +113,13 @@ export async function PUT(req: Request) {
         .where(eq(schema.plans.id, activePlan.id));
 
       // Recalculate allocations based on new income
-      const existingAllocs = await db
+      const existingAllocs = await tx
         .select()
         .from(schema.planAllocations)
         .where(eq(schema.planAllocations.planId, activePlan.id));
 
       for (const alloc of existingAllocs) {
-        await db
+        await tx
           .update(schema.planAllocations)
           .set({
             amount: Math.round((incomePaise * alloc.percent) / 100),
@@ -127,7 +128,7 @@ export async function PUT(req: Request) {
       }
     } else {
       // Create new plan if missing
-      const [newPlan] = await db
+      const [newPlan] = await tx
         .insert(schema.plans)
         .values({
           userId: user.id,
@@ -150,7 +151,7 @@ export async function PUT(req: Request) {
       ];
 
       for (const alloc of defaultKeys) {
-        await db.insert(schema.planAllocations).values({
+        await tx.insert(schema.planAllocations).values({
           planId: newPlan.id,
           key: alloc.key,
           amount: Math.round((incomePaise * alloc.percent) / 100),
@@ -165,12 +166,12 @@ export async function PUT(req: Request) {
       incomePaise * (essentialsPercent / 100) * emergencyMonths,
     );
 
-    const existingEmergency = await db.query.emergencyFunds.findFirst({
+    const existingEmergency = await tx.query.emergencyFunds.findFirst({
       where: eq(schema.emergencyFunds.userId, user.id),
     });
 
     if (existingEmergency) {
-      await db
+      await tx
         .update(schema.emergencyFunds)
         .set({
           targetAmount: targetEmergencyCorpus,
@@ -187,4 +188,5 @@ export async function PUT(req: Request) {
       { status: 500 },
     );
   }
+});
 }

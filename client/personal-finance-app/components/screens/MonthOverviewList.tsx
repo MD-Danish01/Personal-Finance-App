@@ -9,20 +9,28 @@ interface MonthOverviewListProps {
 
 export function MonthOverviewList({ rows }: MonthOverviewListProps) {
   return (
-    <div className="rounded-2xl bg-card shadow-card border border-card divide-y divide-card-border overflow-hidden transition-colors">
-      {rows.map((row) => (
-        <div key={row.label} className="flex items-center gap-4 px-4 py-3.5 hover:bg-muted-bg/40 transition-colors">
-          <div className="flex-1 min-w-0">
+    <div className="month-overview-list overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
+      {rows.map((row, index) => (
+        <div
+          key={row.label}
+          className="month-overview-row group flex items-center gap-4 px-4 py-3.5 transition-all duration-300 hover:bg-muted-bg/40"
+          style={{
+            animationDelay: `${index * 80}ms`,
+          }}
+        >
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-foreground">
+              <span className="text-xs font-bold text-foreground transition-transform duration-300 group-hover:translate-x-0.5">
                 {row.label}
               </span>
+
               {row.status === "goal" && (
-                <span className="rounded-md bg-muted-bg px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                <span className="month-goal-badge rounded-md bg-muted-bg px-1.5 py-0.5 text-[10px] font-bold text-primary">
                   Goal
                 </span>
               )}
             </div>
+
             <div className="mt-2">
               <ProgressBar
                 value={row.amount}
@@ -31,19 +39,29 @@ export function MonthOverviewList({ rows }: MonthOverviewListProps) {
               />
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <div className="text-xs font-bold text-foreground font-mono">
+
+          <div className="shrink-0 text-right">
+            <div className="text-xs font-bold text-foreground font-mono transition-transform duration-300 group-hover:-translate-x-0.5">
               {formatINR(row.amount)}
             </div>
-            <div className="text-[11px] text-muted font-mono">of {formatINR(row.of)}</div>
+
+            <div className="text-[11px] text-muted font-mono">
+              of {formatINR(row.of)}
+            </div>
           </div>
         </div>
       ))}
+
       <Link
         href="/money"
-        className="block px-4 py-3 text-center text-xs font-bold text-primary hover:bg-muted-bg/50 transition-colors"
+        className="month-overview-link group block px-4 py-3 text-center text-xs font-bold text-primary transition-all duration-300 hover:bg-muted-bg/50"
       >
-        View detailed breakdown →
+        <span className="inline-flex items-center gap-1 transition-transform duration-300 group-hover:translate-x-0.5">
+          View detailed breakdown
+          <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
+            →
+          </span>
+        </span>
       </Link>
     </div>
   );

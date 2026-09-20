@@ -7,7 +7,10 @@ interface InsightCardProps {
   title?: string;
 }
 
-const TONE_CLASSES: Record<NonNullable<InsightCardProps["tone"]>, { bg: string; icon: string }> = {
+const TONE_CLASSES: Record<
+  NonNullable<InsightCardProps["tone"]>,
+  { bg: string; icon: string }
+> = {
   positive: {
     bg: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300",
     icon: "text-emerald-500",
@@ -33,30 +36,53 @@ export function InsightCard({
   if (variant === "row") {
     return (
       <div
-        className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-colors ${toneMeta.bg}`}
+        className={`insight-card insight-row group flex items-center gap-3 rounded-2xl border p-3.5 transition-colors ${toneMeta.bg}`}
       >
-        <span className={`shrink-0 ${toneMeta.icon}`}>
+        <span
+          className={`insight-icon shrink-0 ${toneMeta.icon}`}
+        >
           <Icon name="sparkles" size={17} />
         </span>
-        <p className="flex-1 text-xs leading-relaxed font-medium">
+
+        <p className="flex-1 text-xs font-medium leading-relaxed">
           {text}
         </p>
-        <Icon name="chevron-right" size={16} className="opacity-60" />
+
+        <span className="insight-chevron shrink-0">
+          <Icon
+            name="chevron-right"
+            size={16}
+            className="opacity-60"
+          />
+        </span>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-2xl border p-4 transition-colors space-y-1.5 ${toneMeta.bg}`}>
+    <div
+      className={`insight-card insight-block group relative space-y-1.5 overflow-hidden rounded-2xl border p-4 transition-colors ${toneMeta.bg}`}
+    >
+      {/* AI ambient glow */}
+      <div className="insight-glow pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
+
       {title && (
-        <div className="flex items-center gap-2">
-          <span className={`shrink-0 ${toneMeta.icon}`}>
+        <div className="relative z-10 flex items-center gap-2">
+          <span
+            className={`insight-icon shrink-0 ${toneMeta.icon}`}
+          >
             <Icon name="sparkles" size={16} />
           </span>
-          <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{title}</h4>
+
+          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+            {title}
+          </h4>
         </div>
       )}
-      <p className="text-xs leading-relaxed font-medium text-foreground">{text}</p>
+
+      <p className="relative z-10 text-xs font-medium leading-relaxed text-foreground">
+        {text}
+      </p>
     </div>
   );
 }

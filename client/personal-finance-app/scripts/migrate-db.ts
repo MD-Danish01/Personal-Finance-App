@@ -15,7 +15,7 @@ async function main() {
     console.log("Applying column additions to user and financial_profiles...");
 
     await sql`
-      ALTER TABLE "user" 
+      ALTER TABLE "user"
       ADD COLUMN IF NOT EXISTS password text;
     `;
 

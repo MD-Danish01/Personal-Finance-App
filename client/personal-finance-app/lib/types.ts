@@ -138,4 +138,3 @@ export interface User {
 export type ApiResult<T> =
   | { data: T; fromCache: false }
   | { data: T; fromCache: true; cachedAt: number };
-

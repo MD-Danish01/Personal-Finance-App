@@ -21,14 +21,19 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function SpendingDonut({ data, total }: SpendingDonutProps) {
   const safeTotal = total > 0 ? total : 1;
+
   return (
-    <div className="relative mx-auto" style={{ width: SIZE, height: SIZE }}>
+    <div
+      className="spending-donut group relative mx-auto"
+      style={{ width: SIZE, height: SIZE }}
+    >
       <svg
         width={SIZE}
         height={SIZE}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
-        className="-rotate-90"
+        className="spending-donut-svg -rotate-90"
       >
+        {/* Background ring */}
         <circle
           cx={SIZE / 2}
           cy={SIZE / 2}
@@ -36,14 +41,24 @@ export function SpendingDonut({ data, total }: SpendingDonutProps) {
           fill="none"
           stroke="#ececef"
           strokeWidth={STROKE}
+          className="spending-donut-track"
         />
+
+        {/* Category slices */}
         {data.map((slice, index) => {
           const fraction = slice.amount / safeTotal;
           const dashLength = fraction * CIRCUMFERENCE;
+
           const cumulative = data
             .slice(0, index)
-            .reduce((sum, previous) => sum + previous.amount / safeTotal, 0);
+            .reduce(
+              (sum, previous) =>
+                sum + previous.amount / safeTotal,
+              0
+            );
+
           const dashOffset = -cumulative * CIRCUMFERENCE;
+
           return (
             <circle
               key={slice.category}
@@ -53,18 +68,29 @@ export function SpendingDonut({ data, total }: SpendingDonutProps) {
               fill="none"
               stroke={COLOR_BY_CATEGORY[slice.category]}
               strokeWidth={STROKE}
-              strokeDasharray={`${dashLength} ${CIRCUMFERENCE - dashLength}`}
+              strokeDasharray={`${dashLength} ${
+                CIRCUMFERENCE - dashLength
+              }`}
               strokeDashoffset={dashOffset}
               strokeLinecap="butt"
+              className="spending-donut-slice"
+              style={{
+                animationDelay: `${index * 100}ms`,
+              }}
             />
           );
         })}
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-bold text-foreground font-mono">
+
+      {/* Center content */}
+      <div className="spending-donut-center absolute inset-0 flex flex-col items-center justify-center">
+        <span className="spending-donut-total font-mono text-lg font-bold text-foreground">
           ₹{Math.round(total / 100).toLocaleString("en-IN")}
         </span>
-        <span className="text-xs text-muted">Total</span>
+
+        <span className="spending-donut-label text-xs text-muted">
+          Total
+        </span>
       </div>
     </div>
   );

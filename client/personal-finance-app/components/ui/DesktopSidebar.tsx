@@ -11,7 +11,7 @@ const navigation: { href: string; label: string; icon: IconName }[] = [
   { href: "/plan", label: "Plan", icon: "plan" },
   { href: "/goals", label: "Goals", icon: "target" },
   { href: "/insights", label: "Insights", icon: "trending-up" },
-];
+] as const;
 
 export function DesktopSidebar() {
   const pathname = usePathname();
@@ -59,6 +59,7 @@ export function DesktopSidebar() {
           <p className="text-xs font-semibold text-foreground">
             Your money, smarter.
           </p>
+
           <p className="mt-1 text-[10px] text-muted">
             Powered by Financial Copilot
           </p>

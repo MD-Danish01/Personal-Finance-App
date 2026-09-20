@@ -23,7 +23,6 @@
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
     "@capacitor/android": "^8.5.0",
-    "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
     "axios": "^1.19.0",
@@ -39,6 +38,7 @@
     "resend": "^6.25.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

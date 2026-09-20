@@ -33,6 +33,7 @@ function FormattedMessageText({ text }: { text: string }) {
     <div className="space-y-2 text-xs sm:text-sm leading-relaxed">
       {lines.map((line, lineIdx) => {
         const trimmed = line.trim();
+
         if (!trimmed) {
           return <div key={`empty-${baseId}-${lineIdx}`} className="h-1.5" />;
         }
@@ -44,23 +45,32 @@ function FormattedMessageText({ text }: { text: string }) {
         const isWarning = trimmed.startsWith("⚠️");
         const isNextStep = trimmed.startsWith("🎯");
 
-        if (isKeyInsight || isRecommendation || isImpact || isWarning || isNextStep) {
+        if (
+          isKeyInsight ||
+          isRecommendation ||
+          isImpact ||
+          isWarning ||
+          isNextStep
+        ) {
           return (
             <div
               key={`callout-${baseId}-${lineIdx}`}
               className={`p-3 rounded-xl border text-xs font-medium ${
                 isKeyInsight
-                  ? "bg-amber-500/10 border-amber-500/20 text-amber-900 dark:text-amber-200"
+                  ? "bg-amber-500/10 border-amber-500/20 text-foreground"
                   : isRecommendation
-                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-900 dark:text-emerald-200"
+                  ? "bg-emerald-500/10 border-emerald-500/20 text-foreground"
                   : isImpact
-                  ? "bg-blue-500/10 border-blue-500/20 text-blue-900 dark:text-blue-200"
+                  ? "bg-blue-500/10 border-blue-500/20 text-foreground"
                   : isWarning
-                  ? "bg-rose-500/10 border-rose-500/20 text-rose-900 dark:text-rose-200"
-                  : "bg-purple-500/10 border-purple-500/20 text-purple-900 dark:text-purple-200"
+                  ? "bg-rose-500/10 border-rose-500/20 text-foreground"
+                  : "bg-purple-500/10 border-purple-500/20 text-foreground"
               }`}
             >
-              {renderFormattedInline(trimmed, `${baseId}-${lineIdx}`)}
+              {renderFormattedInline(
+                trimmed,
+                `${baseId}-${lineIdx}`
+              )}
             </div>
           );
         }
@@ -69,7 +79,10 @@ function FormattedMessageText({ text }: { text: string }) {
           trimmed.startsWith("•") ||
           trimmed.startsWith("- ") ||
           trimmed.startsWith("* ");
-        const content = isBullet ? trimmed.replace(/^(\s*[•*-]\s*)/, "") : trimmed;
+
+        const content = isBullet
+          ? trimmed.replace(/^(\s*[•*-]\s*)/, "")
+          : trimmed;
 
         return (
           <div
@@ -79,8 +92,12 @@ function FormattedMessageText({ text }: { text: string }) {
             {isBullet && (
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
             )}
+
             <p className={isBullet ? "flex-1" : ""}>
-              {renderFormattedInline(content, `${baseId}-${lineIdx}`)}
+              {renderFormattedInline(
+                content,
+                `${baseId}-${lineIdx}`
+              )}
             </p>
           </div>
         );
@@ -92,14 +109,19 @@ function FormattedMessageText({ text }: { text: string }) {
 // Inline parser for bold (**text**) and code formatting (`code`)
 function renderFormattedInline(text: string, keyPrefix: string) {
   const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+
   return parts.map((part, idx) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={`${keyPrefix}-b-${idx}`} className="font-bold text-foreground">
+        <strong
+          key={`${keyPrefix}-b-${idx}`}
+          className="font-bold text-foreground"
+        >
           {part.slice(2, -2)}
         </strong>
       );
     }
+
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
         <code
@@ -110,12 +132,21 @@ function renderFormattedInline(text: string, keyPrefix: string) {
         </code>
       );
     }
-    return <span key={`${keyPrefix}-t-${idx}`}>{part}</span>;
+
+    return (
+      <span key={`${keyPrefix}-t-${idx}`}>
+        {part}
+      </span>
+    );
   });
 }
 
-export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalProps) {
+export function FinancialAdvisorModal({
+  open,
+  onClose,
+}: FinancialAdvisorModalProps) {
   const messageCounterRef = useRef(0);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome-msg",
@@ -124,6 +155,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
       timestamp: "Just now",
     },
   ]);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
@@ -149,7 +181,9 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
         onClose();
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
+
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
@@ -170,8 +204,13 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
   // Detect scroll position to show "Scroll to bottom" button
   const handleScroll = () => {
     if (!scrollRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    setShowScrollBottom(scrollHeight - scrollTop - clientHeight > 100);
+
+    const { scrollTop, scrollHeight, clientHeight } =
+      scrollRef.current;
+
+    setShowScrollBottom(
+      scrollHeight - scrollTop - clientHeight > 100
+    );
   };
 
   const copyMessage = (id: string, text: string) => {
@@ -195,10 +234,13 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
 
   const sendMessage = async (textToSend: string) => {
     const text = textToSend.trim();
+
     if (!text || loading) return;
 
     messageCounterRef.current += 1;
+
     const userMsgId = `user-${messageCounterRef.current}`;
+
     const userMsg: Message = {
       id: userMsgId,
       sender: "user",
@@ -213,15 +255,23 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
     try {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ message: text }),
       });
 
       const data = await res.json();
-      const reply = data.reply || "Sorry, I could not generate a response. Please try again.";
+
+      const reply =
+        data.reply ||
+        "Sorry, I could not generate a response. Please try again.";
 
       messageCounterRef.current += 1;
-      const aiMsgId = `assistant-${messageCounterRef.current}`;
+
+      const aiMsgId =
+        `assistant-${messageCounterRef.current}`;
+
       const aiMsg: Message = {
         id: aiMsgId,
         sender: "assistant",
@@ -232,6 +282,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
       setMessages((prev) => [...prev, aiMsg]);
     } catch {
       messageCounterRef.current += 1;
+
       setMessages((prev) => [
         ...prev,
         {
@@ -260,7 +311,8 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
           className="
             relative flex w-full max-w-2xl flex-col overflow-hidden
             rounded-t-3xl sm:rounded-3xl border border-card-border
-            bg-card/95 backdrop-blur-2xl text-foreground
+            bg-card backdrop-blur-2xl text-foreground
+            transition-colors duration-200
             shadow-2xl shadow-black/30
             h-[100dvh] sm:h-[min(740px,calc(100vh-48px))]
             animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200
@@ -274,10 +326,11 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
           <div className="h-1 w-full bg-gradient-to-r from-primary via-emerald-500 to-primary/40 opacity-90 shrink-0" />
 
           {/* HEADER */}
-          <div className="flex items-center justify-between border-b border-card-border bg-card/80 backdrop-blur-xl px-4 sm:px-6 py-3.5 shrink-0">
+          <div className="flex items-center justify-between border-b border-card-border bg-card backdrop-blur-xl px-4 sm:px-6 py-3.5 shrink-0">
             <div className="flex items-center gap-3">
               <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-soft text-primary border border-primary-soft-border shadow-inner shrink-0">
                 <Icon name="sparkles" size={19} />
+
                 <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
@@ -287,6 +340,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
               <div>
                 <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-foreground flex items-center gap-2">
                   Financial Copilot
+
                   <span className="hidden xs:inline-block text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-soft text-primary border border-primary-soft-border">
                     AI Advisor
                   </span>
@@ -294,6 +348,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
 
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+
                   <p className="text-[11px] font-medium text-muted">
                     Live Context Connected
                   </p>
@@ -310,7 +365,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
                 className="
                   flex items-center gap-1.5 rounded-xl
                   border border-card-border
-                  bg-muted-bg/80 hover:bg-card-border/50
+                  bg-muted-bg hover:bg-card-border/50
                   px-2.5 py-1.5 sm:px-3 sm:py-2
                   text-xs font-bold text-foreground
                   transition-all duration-150
@@ -318,8 +373,14 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
                   cursor-pointer active:scale-95
                 "
               >
-                <Icon name="calculator" size={14} className="text-primary" />
-                <span className="hidden xs:inline">Simulate</span>
+                <Icon
+                  name="calculator"
+                  size={14}
+                  className="text-primary"
+                />
+                <span className="hidden xs:inline">
+                  Simulate
+                </span>
               </button>
 
               <button
@@ -329,7 +390,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
                 aria-label="Start new conversation"
                 className="
                   flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center
-                  rounded-xl border border-card-border bg-muted-bg/60 text-muted
+                  rounded-xl border border-card-border bg-muted-bg text-muted
                   transition-all duration-150
                   hover:bg-muted-bg hover:text-foreground
                   cursor-pointer active:scale-95
@@ -344,7 +405,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
                 aria-label="Close dialog"
                 className="
                   flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center
-                  rounded-xl border border-card-border bg-muted-bg/60 text-muted
+                  rounded-xl border border-card-border bg-muted-bg text-muted
                   transition-all duration-150
                   hover:bg-muted-bg hover:text-foreground
                   cursor-pointer active:scale-95
@@ -370,7 +431,9 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
               <div
                 key={msg.id}
                 className={`flex gap-2.5 sm:gap-3 group ${
-                  msg.sender === "user" ? "justify-end" : "justify-start"
+                  msg.sender === "user"
+                    ? "justify-end"
+                    : "justify-start"
                 }`}
               >
                 {msg.sender === "assistant" && (
@@ -387,7 +450,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
                     ${
                       msg.sender === "user"
                         ? "rounded-tr-xs bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20"
-                        : "rounded-tl-xs border border-card-border bg-muted-bg/70 text-foreground"
+                        : "rounded-tl-xs border border-card-border bg-muted-bg text-foreground transition-colors duration-200"
                     }
                   `}
                 >
@@ -401,16 +464,31 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
                     {msg.sender === "assistant" && (
                       <button
                         type="button"
-                        onClick={() => copyMessage(msg.id, msg.text)}
+                        onClick={() =>
+                          copyMessage(msg.id, msg.text)
+                        }
                         title="Copy message"
                         className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-[10px] font-bold text-muted hover:text-foreground transition-opacity flex items-center gap-1 cursor-pointer"
                       >
                         <Icon
-                          name={copiedId === msg.id ? "check" : "copy"}
+                          name={
+                            copiedId === msg.id
+                              ? "check"
+                              : "copy"
+                          }
                           size={11}
-                          className={copiedId === msg.id ? "text-emerald-500" : ""}
+                          className={
+                            copiedId === msg.id
+                              ? "text-emerald-500"
+                              : ""
+                          }
                         />
-                        <span>{copiedId === msg.id ? "Copied" : "Copy"}</span>
+
+                        <span>
+                          {copiedId === msg.id
+                            ? "Copied"
+                            : "Copy"}
+                        </span>
                       </button>
                     )}
                   </div>
@@ -425,13 +503,16 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
                   <Icon name="sparkles" size={14} />
                 </div>
 
-                <div className="flex items-center gap-2 rounded-2xl rounded-tl-xs border border-card-border bg-muted-bg/80 px-4 py-3 text-xs font-medium text-muted shadow-xs">
+                <div className="flex items-center gap-2 rounded-2xl rounded-tl-xs border border-card-border bg-muted-bg px-4 py-3 text-xs font-medium text-muted shadow-xs">
                   <span className="flex items-center gap-1 py-0.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" />
                   </span>
-                  <span className="ml-1 text-muted text-[11px] font-semibold">Analyzing your finances...</span>
+
+                  <span className="ml-1 text-muted text-[11px] font-semibold">
+                    Analyzing your finances...
+                  </span>
                 </div>
               </div>
             )}
@@ -449,8 +530,8 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
             </button>
           )}
 
-          {/* QUICK SUGGESTIONS CHIPS (Horizontally Scrollable on Mobile) */}
-          <div className="border-t border-card-border bg-card/60 px-3 sm:px-6 py-2.5 backdrop-blur-xl shrink-0">
+          {/* QUICK SUGGESTIONS CHIPS */}
+          <div className="border-t border-card-border bg-card px-3 sm:px-6 py-2.5 backdrop-blur-xl shrink-0">
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 sm:flex-wrap">
               <span className="text-[10px] uppercase font-bold tracking-wider text-muted shrink-0 mr-1 hidden sm:inline">
                 Suggested:
@@ -465,7 +546,7 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
                   className="
                     shrink-0 rounded-xl
                     border border-card-border
-                    bg-muted-bg/80 hover:bg-primary-soft hover:border-primary-soft-border hover:text-primary
+                    bg-muted-bg hover:bg-primary-soft hover:border-primary-soft-border hover:text-primary
                     px-2.5 py-1.5 sm:px-3 sm:py-1.5
                     text-[11px] font-semibold text-foreground/90
                     transition-all duration-150
@@ -486,9 +567,9 @@ export function FinancialAdvisorModal({ open, onClose }: FinancialAdvisorModalPr
               e.preventDefault();
               sendMessage(input);
             }}
-            className="border-t border-card-border bg-card/80 backdrop-blur-xl p-3 sm:p-4 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            className="border-t border-card-border bg-card backdrop-blur-xl p-3 sm:p-4 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           >
-            <div className="flex items-center gap-2 rounded-2xl border border-card-border bg-muted-bg/90 p-1 sm:p-1.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 shadow-xs">
+            <div className="flex items-center gap-2 rounded-2xl border border-card-border bg-muted-bg p-1 sm:p-1.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 shadow-xs">
               <input
                 ref={inputRef}
                 type="text"

@@ -142,6 +142,7 @@ function AuthFormInner() {
             setError("Invalid email or password. Please check your credentials.");
           }
         } else {
+          localStorage.setItem("spendly_last_login", Date.now().toString());
           router.push("/home");
           router.refresh();
         }
@@ -164,8 +165,12 @@ function AuthFormInner() {
   };
 
   const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl: "/home", redirectTo: "/home" });
-  };
+
+  signIn("google", {
+    callbackUrl: "/home",
+    redirectTo: "/home",
+  });
+};
 
   // View: Awaiting Verification Screen after Sign Up
   if (isAwaitingVerification) {

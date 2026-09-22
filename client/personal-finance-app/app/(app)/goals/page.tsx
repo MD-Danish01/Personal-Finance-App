@@ -39,7 +39,7 @@ export default function GoalsPage() {
 
   if (error) {
     return (
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <Header onAdd={() => setShowCreate(true)} />
         <Card className="mt-8 p-6 text-center">
           <p className="text-sm text-muted">{error}</p>
@@ -57,7 +57,7 @@ export default function GoalsPage() {
 
   if (!goals) {
     return (
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <Header onAdd={() => setShowCreate(true)} />
         <div className="mt-4 animate-pulse space-y-3">
           <div className="h-32 rounded-2xl bg-muted-bg" />
@@ -68,7 +68,7 @@ export default function GoalsPage() {
   }
 
   return (
-    <div className="px-5 pb-8">
+    <div className="goals-page pb-8">
       <Header onAdd={() => setShowCreate(true)} />
 
       {/* Stale-data badge */}

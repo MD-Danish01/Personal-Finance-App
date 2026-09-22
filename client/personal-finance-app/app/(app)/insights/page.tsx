@@ -43,7 +43,7 @@ export default function InsightsPage() {
 
   if (error) {
     return (
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <Header />
 
         <Card className="mt-8 space-y-3 p-6 text-center">
@@ -72,7 +72,7 @@ export default function InsightsPage() {
 
   if (!insights) {
     return (
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <Header />
 
         <div className="mt-6 animate-pulse space-y-4">
@@ -93,7 +93,7 @@ export default function InsightsPage() {
   /* ---------------- MAIN PAGE ---------------- */
 
   return (
-    <div className="insights-page px-5 pb-8">
+    <div className="insights-page pb-8">
       {/* ================= HEADER ================= */}
 
       <div

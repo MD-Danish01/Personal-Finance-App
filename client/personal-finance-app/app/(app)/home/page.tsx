@@ -11,6 +11,7 @@ import { MonthOverviewList } from "@/components/screens/MonthOverviewList";
 import { GoalProgressCard } from "@/components/screens/GoalProgressCard";
 import { InsightCard } from "@/components/screens/InsightCard";
 import { FinancialAdvisorModal } from "@/components/ai/FinancialAdvisorModal";
+import { OverspendWarningModal } from "@/components/ui/OverspendWarningModal";
 import type { DashboardSummary } from "@/lib/types";
 
 export default function HomePage() {
@@ -18,6 +19,21 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [advisorOpen, setAdvisorOpen] = useState(false);
+  const [warningDismissed, setWarningDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      return sessionStorage.getItem(`overspend_dismissed_${todayStr}`) === "true";
+    }
+    return false;
+  });
+
+  const handleDismissWarning = () => {
+    setWarningDismissed(true);
+    if (typeof window !== "undefined") {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      sessionStorage.setItem(`overspend_dismissed_${todayStr}`, "true");
+    }
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -47,7 +63,7 @@ export default function HomePage() {
 
   if (error) {
     return (
-      <div className="spendly-home px-5 pb-8">
+      <div className="spendly-home pb-8">
         <Header
           name="Friend"
           onOpenAI={() => setAdvisorOpen(true)}
@@ -84,7 +100,7 @@ export default function HomePage() {
 
   if (!dashboard) {
     return (
-      <div className="spendly-home px-5 pb-8">
+      <div className="spendly-home pb-8">
         <Header
           name=""
           onOpenAI={() => setAdvisorOpen(true)}
@@ -109,7 +125,7 @@ export default function HomePage() {
   /* ---------------- MAIN DASHBOARD ---------------- */
 
 return (
-  <div className="spendly-home home-dashboard">
+  <div className="spendly-home home-dashboard pb-8">
 
       {/* ================= HEADER ================= */}
 
@@ -131,6 +147,10 @@ return (
       >
         <SafeToSpendCard
           amount={dashboard.safeToSpendToday}
+          todayDesignated={dashboard.todayDesignated}
+          todaySpent={dashboard.todaySpent}
+          isOverDailyBudget={dashboard.isOverDailyBudget}
+          overspentAmount={dashboard.overspentAmount}
           subtitle={dashboard.safeToSpendSubtitle}
         />
       </div>
@@ -256,6 +276,18 @@ return (
         open={advisorOpen}
         onClose={() => setAdvisorOpen(false)}
       />
+
+      {/* ================= OVERSPENDING WARNING POPUP ================= */}
+
+      <OverspendWarningModal
+        open={Boolean(dashboard.isOverDailyBudget && !warningDismissed)}
+        onClose={handleDismissWarning}
+        todaySpent={dashboard.todaySpent ?? 0}
+        todayDesignated={dashboard.todayDesignated ?? 0}
+        overspentAmount={dashboard.overspentAmount ?? 0}
+        newDailySafeToSpend={dashboard.newDailySafeToSpend}
+        onOpenAdvisor={() => setAdvisorOpen(true)}
+      />
     </div>
   );
 }
@@ -283,6 +315,14 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={onOpenAI}
+          aria-label="Ask AI Copilot"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+        >
+          <Icon name="sparkles" size={16} />
+        </button>
         <UserAvatar />
       </div>
     </header>

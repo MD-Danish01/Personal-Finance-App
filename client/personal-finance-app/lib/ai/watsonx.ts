@@ -220,25 +220,47 @@ function generateGroundedFallback(prompt: string): string {
   const days = daysMatch ? daysMatch[1] : "15";
 
   if (prompt.includes("PURCHASE SIMULATION RESULT")) {
-    const itemMatch = prompt.match(/Prospective Item:\s*([^\n]+)/i);
+    const itemMatch = prompt.match(/Prospective Item:\s*([^\n(]+)/i);
     const item = itemMatch ? itemMatch[1].trim() : "this item";
 
     const newSafeMatch = prompt.match(/New Daily Safe-to-Spend:\s*₹([\d,]+)\/day/i);
     const newSafe = newSafeMatch ? newSafeMatch[1] : "250";
 
-    const isAffordable = !prompt.includes("Causes Monthly Deficit");
+    const spentTodayMatch = prompt.match(/Spent Today:\s*₹([\d,]+)/i);
+    const spentToday = spentTodayMatch ? spentTodayMatch[1] : "0";
 
-    if (isAffordable) {
-      return `### 💡 Affordability Assessment for **${item}**\n\n` +
-        `Yes, this purchase is **feasible**, but it will tighten your remaining cashflow:\n\n` +
-        `* **Daily Safe-to-Spend**: Will drop from **₹${safe}/day** to **₹${newSafe}/day** for the remaining **${days} days** of the month.\n` +
-        `* **Suggested Recovery Action**: Trim discretionary dining & shopping by ~20% over the next 10 days to keep your baseline savings intact.`;
-    } else {
+    const designatedMatch = prompt.match(/Today's Designated Budget:\s*₹([\d,]+)\/day/i);
+    const designated = designatedMatch ? designatedMatch[1] : safe;
+
+    const isAlreadyOverspent = prompt.includes("Already Overspent Today: YES") || prompt.includes("Exceeds Today's Budget");
+    const willExceedToday = prompt.includes("Will Exceed Today's Quota: YES") || prompt.includes("Exceeds Today's Allowance");
+    const isMonthlyDeficit = prompt.includes("Causes Monthly Deficit");
+
+    if (isMonthlyDeficit) {
       return `### ⚠️ Budget Warning for **${item}**\n\n` +
-        `This purchase is currently **not recommended** for this billing cycle:\n\n` +
-        `* **Impact**: It exceeds your remaining unallocated budget and will push you into a monthly cashflow deficit.\n` +
-        `* **Recommended Next Step**: Wait until next month's salary or allocate from your buffer corpus rather than dipping into your emergency runway.`;
+        `This purchase is currently **not recommended**:\n\n` +
+        `* **Monthly Impact**: It exceeds your remaining total monthly budget and will push you into a cashflow deficit.\n` +
+        `* **Recommended Action**: Defer this purchase to next month or allocate from your emergency buffer corpus only if strictly essential.`;
     }
+
+    if (isAlreadyOverspent) {
+      return `### ⚠️ Daily Budget Exhausted for **${item}**\n\n` +
+        `You have **already spent your designated money for today** (₹${spentToday} spent out of your ₹${designated}/day safe quota).\n\n` +
+        `* **Same-Day Impact**: Buying **${item}** today borrows directly from tomorrow, lowering your future safe allowance from **₹${safe}/day** to **₹${newSafe}/day** for the remaining **${days} days**.\n` +
+        `* **Recommended Action**: **Wait until tomorrow** to make this purchase so it is funded by tomorrow's fresh daily allowance instead of running an overdraft today.`;
+    }
+
+    if (willExceedToday) {
+      return `### ⚠️ Exceeds Today's Safe Quota for **${item}**\n\n` +
+        `This purchase is feasible within your monthly envelope, but **exceeds today's remaining allowance**:\n\n` +
+        `* **Daily Impact**: Making this purchase today forces future days down to **₹${newSafe}/day** (down from ₹${safe}/day).\n` +
+        `* **Recommended Action**: Consider postponing until tomorrow, or if urgent, plan to trim ₹${Math.round(parseInt(safe.replace(/,/g, ""), 10) * 0.3)} from dining & shopping over the next few days.`;
+    }
+
+    return `### 💡 Affordability Assessment for **${item}**\n\n` +
+      `Yes, this purchase is **safe and affordable**:\n\n` +
+      `* **Daily Safe-to-Spend**: Drops comfortably from **₹${safe}/day** to **₹${newSafe}/day** across the remaining **${days} days**.\n` +
+      `* **Recommendation**: You can safely buy this without disrupting your monthly savings goals or emergency reserves.`;
   }
 
   if (question.includes("safe to spend") || question.includes("safe-to-spend") || question.includes("daily")) {
@@ -276,6 +298,10 @@ PURCHASE SIMULATION RESULT:
 - Original Daily Safe-to-Spend: ₹${simulation.originalDailySafeToSpend}/day
 - New Daily Safe-to-Spend: ₹${simulation.newDailySafeToSpend}/day
 - Status: ${simulation.statusLabel}
+- Today's Budget Status: Spent ₹${simulation.todaySpentRupees} of ₹${simulation.todayDesignatedRupees}/day limit
+- Already Overspent Today: ${simulation.isTodayAlreadyOverspent ? "YES" : "NO"}
+- Will Exceed Today's Quota: ${simulation.willExceedTodayBudget ? `YES (by ₹${simulation.todayOverspentDelta})` : "NO"}
+- Today's Impact Note: ${simulation.todayImpactNote}
 - Goal Impact: ${simulation.goalImpactText}
 `;
   }
@@ -289,6 +315,10 @@ VERIFIED FACTS (GROUNDING DATA - DO NOT HALLUCINATE OR CHANGE NUMBERS):
 - Total Spent This Month: ₹${context.spentRupees.toLocaleString("en-IN")}
 - Monthly Budget: ₹${context.budgetRupees.toLocaleString("en-IN")}
 - Daily Safe-to-Spend: ₹${context.dailySafeToSpendRupees}/day (${context.remainingDays} days left in month)
+- Today's Designated Budget: ₹${context.todayDesignatedRupees}/day
+- Spent Today: ₹${context.todaySpentRupees}
+- Today's Remaining Quota: ₹${context.todayRemainingRupees}
+- Already Overspent Today: ${context.isTodayOverspent ? "YES" : "NO"}
 - Savings Rate: ${context.savingsRatePercent}%
 - Category Spend: ${JSON.stringify(context.byCategory)}
 - Active Goals: ${context.goals.map((g) => `${g.name}: ₹${g.currentRupees}/₹${g.targetRupees}`).join(", ") || "None"}
@@ -301,8 +331,8 @@ USER QUESTION: "${userQuery}"
 
 INSTRUCTIONS:
 1. Answer directly and concisely (max 3 short paragraphs or bullet points).
-2. Reference the exact numbers from the verified facts above.
-3. Suggest 1 or 2 specific actionable steps if spending adjustments are needed.
+2. If the user has already spent today's designated money or this purchase exceeds today's quota, explicitly explain that buying today borrows directly from future days or runs an overdraft, and suggest waiting until tomorrow.
+3. Reference the exact numbers from the verified facts above.
 4. Format using clean Markdown with bold numbers.
 `;
 

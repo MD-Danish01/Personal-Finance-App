@@ -36,6 +36,7 @@ export function MonthOverviewList({ rows }: MonthOverviewListProps) {
                 value={row.amount}
                 max={row.of}
                 colorClass={row.colorClass}
+                trackClass="bg-slate-200/80 dark:bg-white/10"
               />
             </div>
           </div>

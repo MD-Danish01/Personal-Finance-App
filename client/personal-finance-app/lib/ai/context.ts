@@ -23,6 +23,10 @@ export interface StructuredFinancialContext {
   spentRupees: number;
   budgetRupees: number;
   dailySafeToSpendRupees: number;
+  todaySpentRupees: number;
+  todayDesignatedRupees: number;
+  todayRemainingRupees: number;
+  isTodayOverspent: boolean;
   remainingDays: number;
   daysInMonth: number;
   savingsRatePercent: number;
@@ -50,6 +54,13 @@ export interface PurchaseSimulationResult {
   remainingDays: number;
   goalImpactText: string;
   recoveryOptions: string[];
+  todaySpentRupees: number;
+  todayDesignatedRupees: number;
+  todayRemainingRupees: number;
+  isTodayAlreadyOverspent: boolean;
+  willExceedTodayBudget: boolean;
+  todayOverspentDelta: number;
+  todayImpactNote: string;
 }
 
 export async function getStructuredFinancialContext(
@@ -114,7 +125,36 @@ export async function getStructuredFinancialContext(
     };
   });
 
-  // 4. Safe-to-Spend
+  // 4. Today's Spend & Designated Daily Budget
+  const todayStr = `${curYear}-${pad(curMonth)}-${pad(currentDay)}`;
+  const todayExpenseRows = await db
+    .select({
+      total: sql<number>`coalesce(sum(${schema.transactions.amount}), 0)`,
+    })
+    .from(schema.transactions)
+    .where(
+      and(
+        eq(schema.transactions.userId, userId),
+        eq(schema.transactions.type, "expense"),
+        eq(schema.transactions.transactionDate, todayStr),
+      ),
+    );
+
+  const todaySpentPaise = Number(todayExpenseRows[0]?.total ?? 0);
+  const todaySpentRupees = Math.round(todaySpentPaise / 100);
+
+  // Month-to-date expenses prior to today
+  const spentPriorToTodayPaise = Math.max(0, totalSpentPaise - todaySpentPaise);
+  // Designated daily safe-to-spend at the beginning of today
+  const availableAtStartOfTodayPaise = Math.max(0, budgetPaise - spentPriorToTodayPaise);
+  const todayDesignatedRupees = Math.max(
+    0,
+    Math.round(availableAtStartOfTodayPaise / remainingDays / 100),
+  );
+  const todayRemainingRupees = Math.max(0, todayDesignatedRupees - todaySpentRupees);
+  const isTodayOverspent = todayDesignatedRupees > 0 && todaySpentRupees >= todayDesignatedRupees;
+
+  // Safe-to-Spend for remaining days
   const remainingBudgetPaise = Math.max(0, budgetPaise - totalSpentPaise);
   const dailySafeToSpendRupees = Math.max(
     0,
@@ -180,6 +220,10 @@ export async function getStructuredFinancialContext(
     spentRupees,
     budgetRupees,
     dailySafeToSpendRupees,
+    todaySpentRupees,
+    todayDesignatedRupees,
+    todayRemainingRupees,
+    isTodayOverspent,
     remainingDays,
     daysInMonth: lastDay,
     savingsRatePercent,
@@ -203,26 +247,51 @@ export function simulatePurchaseImpact(
 ): PurchaseSimulationResult {
   const currentAvailableRupees = Math.max(0, context.budgetRupees - context.spentRupees);
   const newAvailableRupees = Math.max(0, currentAvailableRupees - purchaseAmountRupees);
+  
+  // Future daily safe-to-spend after absorbing this purchase across remaining days
+  const futureDays = Math.max(1, context.remainingDays - 1);
   const newDailySafeToSpend = Math.max(
     0,
-    Math.round(newAvailableRupees / context.remainingDays),
+    Math.round(newAvailableRupees / (context.remainingDays > 1 ? futureDays : 1)),
   );
 
-  const dailyDropRupees = Math.max(0, context.dailySafeToSpendRupees - newDailySafeToSpend);
+  const baselineDaily = context.todayDesignatedRupees > 0 ? context.todayDesignatedRupees : context.dailySafeToSpendRupees;
+  const dailyDropRupees = Math.max(0, baselineDaily - newDailySafeToSpend);
   const dropPercent =
-    context.dailySafeToSpendRupees > 0
-      ? Math.min(100, Math.round((dailyDropRupees / context.dailySafeToSpendRupees) * 100))
+    baselineDaily > 0
+      ? Math.min(100, Math.round((dailyDropRupees / baselineDaily) * 100))
       : 100;
+
+  // Daily budget tracking
+  const isTodayAlreadyOverspent = context.isTodayOverspent || (context.todayDesignatedRupees > 0 && context.todaySpentRupees >= context.todayDesignatedRupees);
+  const projectedTodaySpend = context.todaySpentRupees + purchaseAmountRupees;
+  const willExceedTodayBudget = context.todayDesignatedRupees > 0 && projectedTodaySpend > context.todayDesignatedRupees;
+  const todayOverspentDelta = willExceedTodayBudget ? Math.max(0, projectedTodaySpend - context.todayDesignatedRupees) : 0;
 
   let status: "SAFE" | "TIGHT" | "DEFICIT" = "SAFE";
   let statusLabel = "Safe & Affordable";
+  let todayImpactNote = "";
 
   if (purchaseAmountRupees > currentAvailableRupees) {
     status = "DEFICIT";
     statusLabel = "Causes Monthly Deficit";
+    todayImpactNote = `This ₹${purchaseAmountRupees.toLocaleString("en-IN")} purchase exceeds your remaining monthly unallocated funds (₹${currentAvailableRupees.toLocaleString("en-IN")}) by ₹${(purchaseAmountRupees - currentAvailableRupees).toLocaleString("en-IN")}, forcing you to dip into savings.`;
+  } else if (isTodayAlreadyOverspent) {
+    status = "DEFICIT";
+    statusLabel = "Exceeds Today's Budget";
+    todayImpactNote = `You have already exhausted today's designated money (spent ₹${context.todaySpentRupees.toLocaleString("en-IN")} of ₹${context.todayDesignatedRupees.toLocaleString("en-IN")} daily quota). Buying "${itemName}" today adds ₹${purchaseAmountRupees.toLocaleString("en-IN")} to today's deficit and directly penalizes tomorrow and future days, dropping your safe daily allowance to ₹${newDailySafeToSpend}/day.`;
+  } else if (willExceedTodayBudget) {
+    status = todayOverspentDelta >= context.todayDesignatedRupees * 0.5 ? "DEFICIT" : "TIGHT";
+    statusLabel = "Exceeds Today's Allowance";
+    todayImpactNote = `You have ₹${context.todayRemainingRupees.toLocaleString("en-IN")} left in today's safe allowance. Buying this item for ₹${purchaseAmountRupees.toLocaleString("en-IN")} will overrun today's designated limit by ₹${todayOverspentDelta.toLocaleString("en-IN")}, borrowing cash from future days.`;
   } else if (newDailySafeToSpend < 200 || dropPercent >= 50) {
     status = "TIGHT";
     statusLabel = "Tightens Daily Cashflow";
+    todayImpactNote = `Fits within today's remaining allowance (leaves ₹${Math.max(0, context.todayRemainingRupees - purchaseAmountRupees).toLocaleString("en-IN")} for today), but significantly compresses your daily allowance for remaining days to ₹${newDailySafeToSpend}/day.`;
+  } else {
+    status = "SAFE";
+    statusLabel = "Safe & Within Today's Limit";
+    todayImpactNote = `Fits within today's remaining safe allowance of ₹${context.todayRemainingRupees.toLocaleString("en-IN")}. You will have ₹${Math.max(0, context.todayRemainingRupees - purchaseAmountRupees).toLocaleString("en-IN")} left for the rest of today.`;
   }
 
   // Goal delay estimate
@@ -239,16 +308,33 @@ export function simulatePurchaseImpact(
     }
   }
 
-  const recoveryOptions: string[] = [
-    `Limit discretionary spend to ₹${newDailySafeToSpend}/day for the remaining ${context.remainingDays} days.`,
-    `Trim ₹${Math.round(purchaseAmountRupees * 0.4).toLocaleString("en-IN")} from Food & Shopping over the next 2 weeks.`,
-  ];
+  const recoveryOptions: string[] = [];
+  if (isTodayAlreadyOverspent || willExceedTodayBudget) {
+    recoveryOptions.push(
+      `Postpone this purchase until tomorrow so it comes out of a refreshed daily allowance rather than running an immediate overdraft.`
+    );
+    recoveryOptions.push(
+      `If purchased today, cap your discretionary spending at ₹${newDailySafeToSpend}/day for the remaining ${context.remainingDays} days to rebalance.`
+    );
+    if (category === "Shopping" || category === "Entertainment" || category === "Food") {
+      recoveryOptions.push(
+        `Trim ₹${Math.round(purchaseAmountRupees * 0.4).toLocaleString("en-IN")} from ${category} over the coming week to recover the deficit.`
+      );
+    }
+  } else {
+    recoveryOptions.push(
+      `Limit discretionary spend to ₹${newDailySafeToSpend}/day for the remaining ${context.remainingDays} days.`
+    );
+    recoveryOptions.push(
+      `Keep an eye on discretionary impulse buys to preserve your ₹${context.emergencyFund.currentRupees.toLocaleString("en-IN")} emergency cushion.`
+    );
+  }
 
   return {
     purchaseAmountRupees,
     itemName,
     category,
-    originalDailySafeToSpend: context.dailySafeToSpendRupees,
+    originalDailySafeToSpend: baselineDaily,
     newDailySafeToSpend,
     dailyDropRupees,
     dropPercent,
@@ -257,5 +343,12 @@ export function simulatePurchaseImpact(
     remainingDays: context.remainingDays,
     goalImpactText,
     recoveryOptions,
+    todaySpentRupees: context.todaySpentRupees,
+    todayDesignatedRupees: context.todayDesignatedRupees,
+    todayRemainingRupees: context.todayRemainingRupees,
+    isTodayAlreadyOverspent,
+    willExceedTodayBudget,
+    todayOverspentDelta,
+    todayImpactNote,
   };
 }

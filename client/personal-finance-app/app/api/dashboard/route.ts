@@ -110,10 +110,45 @@ export async function GET() {
     const dayOfMonth = now.getDate();
     const remainingDays = Math.max(1, daysInMonth - dayOfMonth + 1);
 
-    const safeToSpend =
-      monthBudget > 0
-        ? Math.max(0, Math.round((monthBudget - monthSpent) / remainingDays / 100))
-        : 0;
+    // Today's spending & designated daily budget calculations
+    const todayStr = `${year}-${pad(month)}-${pad(dayOfMonth)}`;
+    const todayExpenseRows = await db
+      .select({
+        total: sql<number>`coalesce(sum(${schema.transactions.amount}), 0)`,
+      })
+      .from(schema.transactions)
+      .where(
+        and(
+          eq(schema.transactions.userId, user.id),
+          eq(schema.transactions.type, "expense"),
+          eq(schema.transactions.transactionDate, todayStr),
+        ),
+      );
+
+    const todaySpentPaise = Number(todayExpenseRows[0]?.total ?? 0);
+    const todaySpentRupees = Math.round(todaySpentPaise / 100);
+
+    // Baseline designated allowance for today at the start of day
+    const spentPriorToTodayPaise = Math.max(0, monthSpent - todaySpentPaise);
+    const availableAtStartOfTodayPaise = Math.max(0, monthBudget - spentPriorToTodayPaise);
+    const todayDesignatedRupees = Math.max(
+      0,
+      Math.round(availableAtStartOfTodayPaise / remainingDays / 100),
+    );
+
+    const isOverDailyBudget = todayDesignatedRupees > 0 && todaySpentRupees > todayDesignatedRupees;
+    const overspentAmount = isOverDailyBudget ? todaySpentRupees - todayDesignatedRupees : 0;
+    const todayRemainingRupees = isOverDailyBudget
+      ? 0
+      : Math.max(0, todayDesignatedRupees - todaySpentRupees);
+
+    // Future daily safe-to-spend baseline across remaining days after today
+    const futureDays = Math.max(1, remainingDays - 1);
+    const remainingMonthPaise = Math.max(0, monthBudget - monthSpent);
+    const baselineDailyRate = Math.max(
+      0,
+      Math.round(remainingMonthPaise / (remainingDays > 1 ? futureDays : 1) / 100),
+    );
 
     const goals = await db
       .select()
@@ -131,6 +166,27 @@ export async function GET() {
         }
       : null;
 
+    // Query goal contributions this month
+    const goalContribRows = await db
+      .select({
+        total: sql<number>`coalesce(sum(${schema.goalContributions.amount}), 0)`,
+      })
+      .from(schema.goalContributions)
+      .innerJoin(schema.goals, eq(schema.goalContributions.goalId, schema.goals.id))
+      .where(
+        and(
+          eq(schema.goals.userId, user.id),
+          gte(schema.goalContributions.contributedAt, new Date(startStr)),
+          lte(schema.goalContributions.contributedAt, new Date(endStr + "T23:59:59.999Z")),
+        ),
+      );
+    const goalContributionsMonthPaise = Number(goalContribRows[0]?.total ?? 0);
+
+    const emergencyFundRecord = await db.query.emergencyFunds.findFirst({
+      where: eq(schema.emergencyFunds.userId, user.id),
+    });
+    const emergencyFundCurrentPaise = emergencyFundRecord?.currentAmount ?? 0;
+
     // Approximate category mapping to allocation buckets:
     // Essentials: Bills + Transport + 50% Food
     // Enjoyment: Shopping + Entertainment + 50% Food
@@ -144,17 +200,48 @@ export async function GET() {
       (spentByCategory["Entertainment"] || 0) +
       Math.round((spentByCategory["Food"] || 0) * 0.5);
 
-    const overview = allocations.map((a) => {
+    // Standard financial planning priority ordering
+    const ALLOCATION_ORDER: Record<string, number> = {
+      essentials: 1,
+      enjoyment: 2,
+      buffer: 3,
+      emergency: 4,
+      future_savings: 5,
+      long_term_wealth: 6,
+    };
+
+    const sortedAllocations = [...allocations].sort(
+      (a, b) =>
+        (ALLOCATION_ORDER[a.key] ?? 99) - (ALLOCATION_ORDER[b.key] ?? 99),
+    );
+
+    const overview = sortedAllocations.map((a) => {
       let spent = 0;
-      if (a.key === "essentials") spent = essentialsSpent;
-      else if (a.key === "enjoyment") spent = enjoymentSpent;
-      else if (a.key === "buffer") spent = spentByCategory["Others"] || 0;
+      let status: "goal" | undefined = undefined;
+
+      if (a.key === "essentials") {
+        spent = essentialsSpent;
+      } else if (a.key === "enjoyment") {
+        spent = enjoymentSpent;
+      } else if (a.key === "buffer") {
+        spent = spentByCategory["Others"] || 0;
+      } else if (a.key === "future_savings") {
+        spent = goalContributionsMonthPaise;
+        status = "goal";
+      } else if (a.key === "emergency") {
+        spent = Math.min(a.amount, emergencyFundCurrentPaise);
+        status = "goal";
+      } else if (a.key === "long_term_wealth") {
+        spent = 0;
+        status = "goal";
+      }
 
       return {
         label: ALLOCATION_LABELS[a.key as keyof typeof ALLOCATION_LABELS] ?? a.key,
         amount: Math.round(spent / 100),
         of: Math.round(a.amount / 100),
         colorClass: ALLOCATION_COLORS[a.key as keyof typeof ALLOCATION_COLORS] ?? "bg-primary",
+        status,
       };
     });
 
@@ -162,7 +249,10 @@ export async function GET() {
     let insightTone: "positive" | "warning" | "info" = "info";
 
     if (monthBudget > 0) {
-      if (monthSpent < monthBudget * 0.7) {
+      if (isOverDailyBudget) {
+        insightText = `You've spent ₹${todaySpentRupees.toLocaleString("en-IN")} today (₹${overspentAmount.toLocaleString("en-IN")} above your daily limit). Safe daily allowance adjusted to ₹${baselineDailyRate}/day for upcoming days.`;
+        insightTone = "warning";
+      } else if (monthSpent < monthBudget * 0.7) {
         insightText = `You're ₹${Math.round(
           (monthBudget - monthSpent) / 100,
         ).toLocaleString("en-IN")} ahead of your spending plan. Great job!`;
@@ -175,10 +265,28 @@ export async function GET() {
       }
     }
 
+    let safeToSpendSubtitle = "Safe daily limit for today";
+    if (monthBudget <= 0) {
+      safeToSpendSubtitle = "Set income in Profile to activate Safe-to-Spend";
+    } else if (isOverDailyBudget) {
+      safeToSpendSubtitle = `Exceeded today by ₹${overspentAmount.toLocaleString("en-IN")} (${todaySpentRupees.toLocaleString("en-IN")} spent of ₹${todayDesignatedRupees.toLocaleString("en-IN")})`;
+    } else if (todaySpentRupees > 0) {
+      safeToSpendSubtitle = `₹${todaySpentRupees.toLocaleString("en-IN")} spent of ₹${todayDesignatedRupees.toLocaleString("en-IN")} daily quota`;
+    } else {
+      safeToSpendSubtitle = `Full ₹${todayDesignatedRupees.toLocaleString("en-IN")} daily quota available today`;
+    }
+
     return NextResponse.json({
       greetingName: user.name?.split(" ")[0] || "Friend",
-      safeToSpendToday: safeToSpend,
-      safeToSpendSubtitle: "Safe daily limit for remaining days",
+      safeToSpendToday: todayRemainingRupees,
+      safeToSpendSubtitle,
+      todaySpent: todaySpentRupees,
+      todayDesignated: todayDesignatedRupees,
+      todayRemaining: todayRemainingRupees,
+      baselineDaily: baselineDailyRate,
+      isOverDailyBudget,
+      overspentAmount,
+      newDailySafeToSpend: baselineDailyRate,
       monthSpent: Math.round(monthSpent / 100),
       monthBudget: Math.round(monthBudget / 100),
       overview,
@@ -191,6 +299,13 @@ export async function GET() {
       greetingName: user.name?.split(" ")[0] || "Friend",
       safeToSpendToday: 0,
       safeToSpendSubtitle: "Set income in Profile to activate Safe-to-Spend",
+      todaySpent: 0,
+      todayDesignated: 0,
+      todayRemaining: 0,
+      baselineDaily: 0,
+      isOverDailyBudget: false,
+      overspentAmount: 0,
+      newDailySafeToSpend: 0,
       monthSpent: 0,
       monthBudget: 0,
       overview: [],

@@ -236,27 +236,27 @@ export function PurchaseSimulatorModal({
                 transition-colors duration-200
               "
             >
-              <option value="Shopping">
+              <option value="Shopping" className="bg-card text-foreground py-1.5 px-3">
                 Shopping & Electronics
               </option>
 
-              <option value="Food">
+              <option value="Food" className="bg-card text-foreground py-1.5 px-3">
                 Dining & Food Delivery
               </option>
 
-              <option value="Entertainment">
+              <option value="Entertainment" className="bg-card text-foreground py-1.5 px-3">
                 Entertainment & Travel
               </option>
 
-              <option value="Transport">
+              <option value="Transport" className="bg-card text-foreground py-1.5 px-3">
                 Vehicle & Transport
               </option>
 
-              <option value="Bills">
+              <option value="Bills" className="bg-card text-foreground py-1.5 px-3">
                 Bills & Subscriptions
               </option>
 
-              <option value="Others">
+              <option value="Others" className="bg-card text-foreground py-1.5 px-3">
                 General Miscellaneous
               </option>
             </select>
@@ -334,8 +334,87 @@ export function PurchaseSimulatorModal({
 
         {/* Simulation Output Card */}
         {result && (
-          <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            {/* Status Banner */}
+          <div className="space-y-3.5 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Today Budget Overrun Warning Banner */}
+            {result.simulation.isTodayAlreadyOverspent && (
+              <div className="p-3.5 rounded-2xl border border-red-500/35 bg-red-500/10 space-y-2 text-foreground">
+                <div className="flex items-center gap-2 text-xs font-bold text-red-500">
+                  <Icon name="alert-triangle" size={16} />
+                  <span>Today&apos;s Designated Safe Money Is Already Exhausted</span>
+                </div>
+                <p className="text-[11px] text-foreground/85 leading-relaxed font-medium">
+                  {result.simulation.todayImpactNote}
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-red-500/20 text-[11px]">
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-bold">Today&apos;s Limit</span>
+                    <span className="font-mono font-bold">{formatINR(result.simulation.todayDesignatedRupees)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-bold">Already Spent Today</span>
+                    <span className="font-mono font-bold text-red-500">{formatINR(result.simulation.todaySpentRupees)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!result.simulation.isTodayAlreadyOverspent && result.simulation.willExceedTodayBudget && (
+              <div className="p-3.5 rounded-2xl border border-amber-500/35 bg-amber-500/10 space-y-2 text-foreground">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-500">
+                  <Icon name="alert-triangle" size={16} />
+                  <span>Exceeds Today&apos;s Remaining Safe Allowance</span>
+                </div>
+                <p className="text-[11px] text-foreground/85 leading-relaxed font-medium">
+                  {result.simulation.todayImpactNote}
+                </p>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-amber-500/20 text-[11px]">
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-bold">Left Today</span>
+                    <span className="font-mono font-bold">{formatINR(result.simulation.todayRemainingRupees)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-bold">Item Price</span>
+                    <span className="font-mono font-bold">{formatINR(result.simulation.purchaseAmountRupees)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-bold">Today Overrun</span>
+                    <span className="font-mono font-bold text-amber-500">+{formatINR(result.simulation.todayOverspentDelta)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!result.simulation.isTodayAlreadyOverspent && !result.simulation.willExceedTodayBudget && (
+              <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 space-y-2 text-foreground">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-500">
+                    <Icon name="check-circle" size={16} />
+                    <span>Fits Within Today&apos;s Designated Safe Quota</span>
+                  </div>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                    Safe Today
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-emerald-500/20 text-[11px]">
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-bold">Today&apos;s Quota</span>
+                    <span className="font-mono font-bold">{formatINR(result.simulation.todayDesignatedRupees)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-bold">Spent Today</span>
+                    <span className="font-mono font-bold">{formatINR(result.simulation.todaySpentRupees)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-bold">Left After Buy</span>
+                    <span className="font-mono font-bold text-emerald-500">
+                      {formatINR(Math.max(0, result.simulation.todayRemainingRupees - result.simulation.purchaseAmountRupees))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Feasibility Assessment Card */}
             <div
               className={`
                 p-4
@@ -366,7 +445,7 @@ export function PurchaseSimulatorModal({
               <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-current/15">
                 <div>
                   <span className="text-[11px] opacity-80 block font-medium">
-                    Current Daily Safe-to-Spend
+                    Month Baseline Daily Rate
                   </span>
 
                   <span className="text-base sm:text-lg font-extrabold font-mono">
@@ -383,7 +462,7 @@ export function PurchaseSimulatorModal({
 
                 <div>
                   <span className="text-[11px] opacity-80 block font-medium">
-                    New Safe-to-Spend
+                    New Rate for Upcoming Days
                   </span>
 
                   <span className="text-base sm:text-lg font-extrabold font-mono">
@@ -399,6 +478,23 @@ export function PurchaseSimulatorModal({
                 </div>
               </div>
             </div>
+
+            {/* Recommended Action Steps */}
+            {result.simulation.recoveryOptions && result.simulation.recoveryOptions.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-muted-bg border border-card-border space-y-2">
+                <span className="text-xs font-bold text-foreground block">
+                  Actionable Next Steps
+                </span>
+                <ul className="space-y-1.5 text-[11px] text-muted font-medium">
+                  {result.simulation.recoveryOptions.map((opt, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>{opt}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* AI Reasoning Block */}
             <div

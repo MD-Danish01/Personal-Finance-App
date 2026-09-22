@@ -50,7 +50,7 @@ export default function PlanPage() {
 
   if (error) {
     return (
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <Header onEditPlan={() => setEditing(true)} />
         <Card className="mt-8 p-6 text-center space-y-3">
           <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-primary-soft text-primary">
@@ -71,7 +71,7 @@ export default function PlanPage() {
 
   if (!plan) {
     return (
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <Header onEditPlan={() => setEditing(true)} />
         <div className="mt-6 animate-pulse space-y-4">
           <div className="h-16 rounded-xl bg-muted-bg" />
@@ -82,7 +82,7 @@ export default function PlanPage() {
   }
 
   return (
-    <div className="px-5 pb-8 space-y-6">
+    <div className="plan-page pb-8 space-y-6">
       <Header onEditPlan={() => setEditing(true)} />
 
       {/* Stale-data badge */}

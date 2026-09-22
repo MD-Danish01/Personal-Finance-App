@@ -10,7 +10,7 @@ export function ProgressBar({
   value,
   max = 100,
   colorClass = "bg-brand-green",
-  trackClass = "bg-black/5",
+  trackClass = "bg-slate-200/80 dark:bg-white/10",
   className = "",
 }: ProgressBarProps) {
   const pct =
@@ -18,15 +18,18 @@ export function ProgressBar({
 
   return (
     <div
-      className={`progress-bar-track h-1.5 w-full overflow-hidden rounded-full ${trackClass} ${className}`}
+      className={`progress-bar-track h-2 w-full overflow-hidden rounded-full ${trackClass} ${className}`}
       role="progressbar"
       aria-valuenow={pct}
       aria-valuemin={0}
       aria-valuemax={100}
     >
       <div
-        className={`progress-bar-fill h-full rounded-full ${colorClass}`}
-        style={{ width: `${pct}%` }}
+        className={`progress-bar-fill h-full rounded-full transition-all duration-300 ${colorClass}`}
+        style={{
+          width: `${pct}%`,
+          minWidth: pct > 0 ? "6px" : "0px",
+        }}
       />
     </div>
   );

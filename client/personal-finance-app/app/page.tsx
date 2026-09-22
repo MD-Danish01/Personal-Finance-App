@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import LandingEntry from "@/components/landing/LandingEntry";
+import LandingHeader from "@/components/landing/LandingHeader";
 const features = [
   {
     number: "01",
@@ -133,34 +135,7 @@ export default function Page() {
       <div className="landing-grid" />
 
       {/* HEADER */}
-      <header className="landing-header">
-        <div className="landing-header-inner">
-          <Link href="/" className="landing-logo">
-            <img
-  src="/favicon.ico"
-  alt="SPENDLY"
-  className="h-9 w-9 object-contain"
-/>
-            <span>
-              <strong>SPENDLY</strong>
-              <small>Personal Finance Assistant</small>
-            </span>
-          </Link>
-
-          <nav className="landing-nav">
-            <a href="#home">Home</a>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#features">Features</a>
-            <a href="#about">About</a>
-            <a href="#faq">FAQ</a>
-          </nav>
-
-          <Link href="/login" className="landing-header-cta">
-            Get Started
-            <span>→</span>
-          </Link>
-        </div>
-      </header>
+      <LandingHeader />
 
       {/* HERO */}
       <section id="home" className="landing-hero landing-container">
@@ -347,7 +322,12 @@ export default function Page() {
           <div className="landing-steps">
             {steps.map((step, index) => (
               <div className="landing-step" key={step.number}>
-                <div className="step-number">{step.number}</div>
+                <div className="step-badge-wrap">
+                  <div className="step-number">{step.number}</div>
+                  {index !== steps.length - 1 && (
+                    <div className="step-connector-mobile" />
+                  )}
+                </div>
 
                 <div className="step-content">
                   <h3>{step.title}</h3>
@@ -524,7 +504,7 @@ export default function Page() {
       <section className="landing-about-section">
         <div className="landing-container">
           <div className="landing-about">
-            <div></div>
+            <div className="about-mark">S</div>
 
             <div>
               <span className="landing-section-label">ABOUT SPENDLY</span>
@@ -626,11 +606,13 @@ export default function Page() {
         <div className="landing-container">
           <div className="landing-footer-main">
             <Link href="/" className="landing-logo">
-              <img
-  src="/favicon.ico"
-  alt="SPENDLY"
-  className="h-9 w-9 object-contain"
-/>
+              <Image
+                src="/favicon.ico"
+                alt="SPENDLY"
+                width={36}
+                height={36}
+                className="h-9 w-9 object-contain"
+              />
               <span>
                 <strong>SPENDLY</strong>
                 <small>Personal Finance Assistant</small>

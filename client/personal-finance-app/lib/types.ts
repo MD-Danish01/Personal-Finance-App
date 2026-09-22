@@ -80,6 +80,13 @@ export interface DashboardSummary {
   greetingName: string;
   safeToSpendToday: number;
   safeToSpendSubtitle: string;
+  todaySpent?: number;
+  todayDesignated?: number;
+  todayRemaining?: number;
+  baselineDaily?: number;
+  isOverDailyBudget?: boolean;
+  overspentAmount?: number;
+  newDailySafeToSpend?: number;
   monthSpent: number;
   monthBudget: number;
   overview: MonthOverviewRow[];
@@ -89,7 +96,7 @@ export interface DashboardSummary {
     current: number;
     target: number;
     colorClass: string;
-  };
+  } | null;
   insight: {
     text: string;
     tone: "positive" | "warning" | "info";

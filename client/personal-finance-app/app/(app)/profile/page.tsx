@@ -15,7 +15,7 @@ export default async function ProfilePage() {
   const image = user?.image;
 
   return (
-    <div className="px-5 pb-8">
+    <div className="profile-page pb-8">
       <header className="flex items-center justify-between px-1 py-5">
         <div>
           <h1 className="text-[22px] font-bold tracking-tight text-foreground">Profile & Settings</h1>

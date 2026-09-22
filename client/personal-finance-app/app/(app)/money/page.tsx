@@ -48,7 +48,7 @@ export default function MoneyPage() {
 
   if (error) {
     return (
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <Header onOpenAdd={() => setIsAddOpen(true)} />
 
         <Card className="money-error-card mt-8 p-6 text-center">
@@ -68,7 +68,7 @@ export default function MoneyPage() {
 
   if (!spending || !recent) {
     return (
-      <div className="px-5 pb-4">
+      <div className="pb-4">
         <Header onOpenAdd={() => setIsAddOpen(true)} />
 
         <div className="mt-6 animate-pulse space-y-4">
@@ -81,7 +81,7 @@ export default function MoneyPage() {
   }
 
   return (
-    <div className="money-page relative px-5 pb-8">
+    <div className="money-page relative pb-8">
       {/* HEADER */}
 
       <div

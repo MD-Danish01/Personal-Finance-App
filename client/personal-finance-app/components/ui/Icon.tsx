@@ -27,6 +27,7 @@ import {
   Moon,
   MoveUpRight,
   Palette,
+  Pencil,
   Plus,
   Receipt,
   RefreshCw,
@@ -104,7 +105,8 @@ export type IconName =
   | "refresh-cw"
   | "trash-2"
   | "palette"
-  | "copy";
+  | "copy"
+  | "pencil";
 
 interface IconProps {
   name: IconName;
@@ -168,6 +170,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   "trash-2": Trash2,
   palette: Palette,
   copy: Copy,
+  pencil: Pencil,
 };
 
 export function Icon({ name, size = 20, className, strokeWidth = 1.8 }: IconProps) {

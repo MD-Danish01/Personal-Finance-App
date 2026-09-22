@@ -1,17 +1,14 @@
-import type { Category } from "@/lib/types";
+import type { Category, Transaction } from "@/lib/types";
 import type { IconName } from "../ui/Icon";
 import { TransactionRow } from "./TransactionRow";
 
-interface RecentItem {
-  id: string;
-  merchant: string;
-  category: Category;
-  amount: number;
+interface RecentItem extends Transaction {
   relativeDate: string;
 }
 
 interface TransactionListProps {
   items: RecentItem[];
+  onEdit?: (item: RecentItem) => void;
 }
 
 const ICON_BY_CATEGORY: Record<Category, { icon: IconName; bg: string }> = {
@@ -41,7 +38,7 @@ const ICON_BY_CATEGORY: Record<Category, { icon: IconName; bg: string }> = {
   },
 };
 
-export function TransactionList({ items }: TransactionListProps) {
+export function TransactionList({ items, onEdit }: TransactionListProps) {
   return (
     <div className="transaction-list divide-y divide-card-border overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
       {items.map((item, index) => {
@@ -63,6 +60,8 @@ export function TransactionList({ items }: TransactionListProps) {
               relativeDate={item.relativeDate}
               iconName={iconInfo.icon}
               iconBgClass={iconInfo.bg}
+              type={item.type}
+              onEdit={onEdit ? () => onEdit(item) : undefined}
             />
           </div>
         );

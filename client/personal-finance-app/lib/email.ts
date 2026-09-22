@@ -22,7 +22,6 @@ export async function sendVerificationEmail({
   to,
   name,
   token,
-  baseUrl,
 }: VerificationEmailParams): Promise<{ success: boolean; error?: string }> {
   const origin =
     process.env.EMAIL_APP_URL ||
@@ -154,7 +153,6 @@ export async function sendOverspendingAlertEmail({
   overspentAmount,
   remainingDays,
   newDailySafeToSpend,
-  baseUrl,
 }: OverspendingAlertEmailParams): Promise<{ success: boolean; error?: string }> {
   const origin =
     process.env.EMAIL_APP_URL ||

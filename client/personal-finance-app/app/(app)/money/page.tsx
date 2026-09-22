@@ -10,7 +10,8 @@ import { Card } from "@/components/ui/Card";
 import { SpendingDonut } from "@/components/screens/SpendingDonut";
 import { TransactionList } from "@/components/screens/TransactionList";
 import { AddTransactionModal } from "@/components/ui/AddTransactionModal";
-import type { RecentTransactions, SpendingSummary } from "@/lib/types";
+import { EditTransactionModal } from "@/components/ui/EditTransactionModal";
+import type { RecentTransactions, SpendingSummary, Transaction } from "@/lib/types";
 
 const DOT_COLORS: Record<string, string> = {
   Food: "bg-amber-500",
@@ -21,11 +22,14 @@ const DOT_COLORS: Record<string, string> = {
   Others: "bg-slate-400",
 };
 
+type RecentItem = Transaction & { relativeDate: string };
+
 export default function MoneyPage() {
   const [spending, setSpending] = useState<SpendingSummary | null>(null);
   const [recent, setRecent] = useState<RecentTransactions | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<RecentItem | null>(null);
 
   const fetchData = useCallback(() => {
     Promise.all([getSpendingByCategory(), getRecentTransactions()])
@@ -220,7 +224,10 @@ export default function MoneyPage() {
           </Card>
         ) : (
           <div className="money-transactions">
-            <TransactionList items={recent.items} />
+            <TransactionList
+              items={recent.items}
+              onEdit={(item) => setEditingTransaction(item)}
+            />
           </div>
         )}
       </section>
@@ -231,6 +238,18 @@ export default function MoneyPage() {
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onAdded={fetchData}
+      />
+
+      {/* EDIT TRANSACTION MODAL */}
+
+      <EditTransactionModal
+        open={editingTransaction !== null}
+        transaction={editingTransaction}
+        onClose={() => setEditingTransaction(null)}
+        onSaved={() => {
+          setEditingTransaction(null);
+          fetchData();
+        }}
       />
     </div>
   );

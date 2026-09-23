@@ -17,7 +17,7 @@
  *   /home  /money  /plan  /goals  /insights  /offline
  */
 
-const CACHE = "pfa-v2";
+const CACHE = "pfa-v3";
 
 const PRECACHE_URLS = [
   "/home",
@@ -25,6 +25,7 @@ const PRECACHE_URLS = [
   "/plan",
   "/goals",
   "/insights",
+  "/profile",
   "/offline",
 ];
 
@@ -144,10 +145,18 @@ self.addEventListener("fetch", (event) => {
  * Used for immutable static assets (cache-first path).
  */
 async function fetchAndCache(request) {
-  const response = await fetch(request);
-  const cache = await caches.open(CACHE);
-  cache.put(request, response.clone());
-  return response;
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (err) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    throw err;
+  }
 }
 
 /**

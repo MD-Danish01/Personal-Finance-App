@@ -43,6 +43,40 @@ export function ServiceWorkerRegistrar() {
       .catch(() => {
         // Registration failed (e.g. non-HTTPS) — app works normally without SW
       });
+    // Listen for new service worker taking control and refresh to get latest assets
+    const handleControllerChange = () => {
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
+
+    // Global listener for ChunkLoadError (triggered when navigating with a stale build after deployment)
+    const handleChunkError = (event: ErrorEvent | PromiseRejectionEvent) => {
+      const error = "error" in event ? event.error : event.reason;
+      const message = error?.message || String(error || "");
+      const isChunkError =
+        error?.name === "ChunkLoadError" ||
+        message.includes("Failed to load chunk") ||
+        message.includes("Loading chunk");
+
+      if (isChunkError) {
+        const lastReload = sessionStorage.getItem("pfa_chunk_reload");
+        const now = Date.now();
+        // Prevent reload loop: only reload once per 10 seconds
+        if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+          sessionStorage.setItem("pfa_chunk_reload", String(now));
+          window.location.reload();
+        }
+      }
+    };
+
+    window.addEventListener("error", handleChunkError);
+    window.addEventListener("unhandledrejection", handleChunkError);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+      window.removeEventListener("error", handleChunkError);
+      window.removeEventListener("unhandledrejection", handleChunkError);
+    };
   }, []);
 
   return null;

@@ -457,7 +457,28 @@ local `users` table duplicating Supabase's.
 
 ---
 
-## 9. Key Business Rules
+## 9. Payment Gateway & Transfer Module (Razorpay Integration)
+
+- **Purpose & Scope:** While Account Aggregator (Setu) handles read-only historical bank data fetching, the Transfer module empowers users to take immediate action by executing verified payments directly from Spendly.
+- **Provider:** **Razorpay Payment Gateway** (Sandbox test mode first; production ready).
+- **Supported Payment Modes:**
+  - **UPI:** Instant app intent (Google Pay, PhonePe, Paytm, BHIM) and dynamic UPI QR code.
+  - **Cards:** Debit and Credit cards (Visa, Mastercard, RuPay, Amex) via 3D Secure OTP.
+  - **Netbanking:** 50+ major Indian banks supported out of the box.
+  - **Wallets:** Amazon Pay, Mobikwik, PhonePe wallet, etc.
+- **Security & Integrity Model:**
+  - **Order-First Workflow:** Orders are initialized on the Next.js server via `POST /api/razorpay/create-order` using `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. No amount manipulation is possible on the client.
+  - **HMAC-SHA256 Cryptographic Verification:** On payment completion, client sends `razorpay_order_id`, `razorpay_payment_id`, and `razorpay_signature` to `POST /api/razorpay/verify-payment`. The backend verifies `HMAC_SHA256(order_id + "|" + payment_id, secret) == signature`.
+  - **Automated Ledger Sync:** Verified payments are automatically saved into the PostgreSQL `transactions` table as authenticated expense records (`type: 'expense'`), which immediately updates Plan vs Actual, Daily Safe-to-Spend, and cashflow analytics.
+  - **Overspend Alert Check:** Every completed transfer triggers an immediate evaluation of today's daily limit, alerting the user via notifications and email if spending exceeds designated limits.
+- **Credentials & Environment Variables:**
+  - `RAZORPAY_KEY_ID`: Client & Server identifier for authentication.
+  - `RAZORPAY_KEY_SECRET`: Server-only secret for cryptographic signature validation.
+  - `NEXT_PUBLIC_RAZORPAY_KEY_ID`: Public key passed to the Razorpay Checkout client modal.
+
+---
+
+## 10. Key Business Rules
 
 1. **User owns the final plan** — a recommended plan is never a forced plan.
 2. **Enjoyment spending is allowed** — the app doesn't treat all discretionary
@@ -472,7 +493,7 @@ local `users` table duplicating Supabase's.
 
 ---
 
-## 10. Open Decisions
+## 11. Open Decisions
 
 - [ ] Final project name / domain
 - [ ] Exact Setu consent field values (`purpose.code`, `dataRange`,

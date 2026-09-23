@@ -11,6 +11,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { Icon } from "@/components/ui/Icon";
 import { Card } from "@/components/ui/Card";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -21,7 +22,7 @@ import type { Category } from "@/lib/types";
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Demo transfer steps
+// Transfer steps
 type TransferStep =
   | "home"
   | "form"
@@ -33,6 +34,10 @@ type TransferStep =
   | "upi-pay-form"
   | "upi-pay-qr"
   | "upi-pay-return"
+  // Razorpay Gateway flow steps
+  | "razorpay-form"
+  | "razorpay-processing"
+  | "razorpay-success";
 
 interface TransferFormData {
   recipientName: string;
@@ -51,6 +56,38 @@ interface CompletedTransfer {
   note: string;
   timestamp: string; // ISO string — serialisable for localStorage
   transactionId: string;
+  paymentId?: string;
+  orderId?: string;
+  isVerified?: boolean;
+}
+
+/**
+ * Dynamically loads the Razorpay checkout.js script into the browser.
+ */
+function loadRazorpayCheckoutScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+    if ((window as unknown as { Razorpay?: unknown }).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const existing = document.getElementById("razorpay-checkout-js");
+    if (existing) {
+      existing.addEventListener("load", () => resolve(true));
+      existing.addEventListener("error", () => resolve(false));
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-js";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1178,6 +1215,484 @@ function PayViaUpiCard({ isMobile, onEnterUpiId, onScanQr }: PayViaUpiCardProps)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Pay via Razorpay — Gateway Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface PayViaRazorpayCardProps {
+  onStartPayment: () => void;
+}
+
+function PayViaRazorpayCard({ onStartPayment }: PayViaRazorpayCardProps) {
+  return (
+    <div className="rounded-2xl border border-indigo-500/20 bg-card shadow-card overflow-hidden">
+      {/* Card header */}
+      <div className="px-5 pt-5 pb-4 border-b border-card-border bg-gradient-to-br from-indigo-500/10 via-primary/5 to-transparent">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-base font-bold text-foreground">Pay via Razorpay</h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                <Icon name="shield" size={10} />
+                SECURE GATEWAY
+              </span>
+            </div>
+            <p className="text-xs text-muted leading-snug">
+              Instant transfer via Cards, UPI, Netbanking &amp; Wallets
+            </p>
+          </div>
+          <span
+            className="shrink-0 flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+            aria-hidden="true"
+          >
+            <Icon name="credit-card" size={20} />
+          </span>
+        </div>
+      </div>
+
+      {/* Card body */}
+      <div className="p-5 space-y-4">
+        {/* Payment channels supported */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="flex items-center gap-2 rounded-xl bg-muted-bg/60 border border-card-border px-3 py-2 text-xs">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 font-bold text-[10px]">
+              💳
+            </span>
+            <span className="text-[11px] font-medium text-foreground truncate">Credit/Debit Cards</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-muted-bg/60 border border-card-border px-3 py-2 text-xs">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-[10px]">
+              ⚡
+            </span>
+            <span className="text-[11px] font-medium text-foreground truncate">UPI &amp; QR</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-muted-bg/60 border border-card-border px-3 py-2 text-xs">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 font-bold text-[10px]">
+              🏛️
+            </span>
+            <span className="text-[11px] font-medium text-foreground truncate">Net Banking</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-muted-bg/60 border border-card-border px-3 py-2 text-xs">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 font-bold text-[10px]">
+              👛
+            </span>
+            <span className="text-[11px] font-medium text-foreground truncate">Wallets</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+          <div className="text-[11px] text-muted flex items-center gap-1.5">
+            <Icon name="check-circle" size={13} className="text-emerald-500 shrink-0" />
+            <span>Automatic ledger sync &amp; budget overspend check</span>
+          </div>
+          <button
+            type="button"
+            onClick={onStartPayment}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+          >
+            <span>Transfer with Razorpay</span>
+            <Icon name="arrow-right" size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Razorpay Transfer Form
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface RazorpayTransferFormProps {
+  initial?: Partial<TransferFormData>;
+  onProceed: (data: TransferFormData) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+  error?: string | null;
+}
+
+function RazorpayTransferForm({
+  initial,
+  onProceed,
+  onCancel,
+  isLoading,
+  error,
+}: RazorpayTransferFormProps) {
+  const [form, setForm] = useState<TransferFormData>({
+    recipientName: initial?.recipientName ?? "",
+    upiId: initial?.upiId ?? "",
+    amount: initial?.amount ?? "",
+    note: initial?.note ?? "",
+    category: initial?.category ?? "Others",
+  });
+  const [errors, setErrors] = useState<Partial<Record<keyof TransferFormData, string>>>({});
+  const amountInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    amountInputRef.current?.focus();
+  }, []);
+
+  const validate = (): boolean => {
+    const e: typeof errors = {};
+    if (!form.recipientName.trim()) {
+      e.recipientName = "Please enter a recipient or payee name.";
+    }
+    const numAmount = parseFloat(form.amount);
+    if (!form.amount.trim()) {
+      e.amount = "Please enter an amount.";
+    } else if (isNaN(numAmount) || numAmount <= 0) {
+      e.amount = "Enter an amount greater than ₹0.";
+    } else if (numAmount > 100000) {
+      e.amount = "Maximum transfer amount is ₹1,00,000.";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (validate()) {
+      onProceed(form);
+    }
+  };
+
+  const setField = (field: keyof TransferFormData) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 px-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isLoading}
+          aria-label="Back"
+          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted-bg text-muted cursor-pointer disabled:opacity-50"
+        >
+          <Icon name="arrow-right" size={16} className="rotate-180" />
+        </button>
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Razorpay Transfer</h2>
+          <p className="text-xs text-muted">Pay via Cards, UPI, Netbanking or Wallets</p>
+        </div>
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+          <Icon name="shield" size={10} />
+          TEST GATEWAY
+        </span>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400">
+          <Icon name="alert-triangle" size={15} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <Card className="p-4 sm:p-5">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {/* Recipient / Payee Name */}
+          <div>
+            <label
+              htmlFor="rzp-recipient"
+              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5"
+            >
+              Recipient / Payee Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="rzp-recipient"
+              type="text"
+              value={form.recipientName}
+              onChange={setField("recipientName")}
+              placeholder="e.g. Rahul Sharma / Amazon / Landlord"
+              autoComplete="off"
+              disabled={isLoading}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50"
+              aria-describedby={errors.recipientName ? "rzp-rec-err" : undefined}
+            />
+            {errors.recipientName && (
+              <p id="rzp-rec-err" role="alert" className="text-[11px] text-red-500 mt-1">
+                {errors.recipientName}
+              </p>
+            )}
+          </div>
+
+          {/* Amount */}
+          <div>
+            <label
+              htmlFor="rzp-amount"
+              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5"
+            >
+              Amount <span className="text-red-500">*</span>
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-xl font-bold text-muted pointer-events-none">₹</span>
+              <input
+                id="rzp-amount"
+                ref={amountInputRef}
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={form.amount}
+                onChange={setField("amount")}
+                placeholder="0.00"
+                disabled={isLoading}
+                className="w-full pl-9 pr-4 py-3 text-2xl font-bold rounded-2xl bg-muted-bg border border-card-border text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/30 font-mono"
+                aria-describedby={errors.amount ? "rzp-amt-err" : undefined}
+              />
+            </div>
+            {errors.amount && (
+              <p id="rzp-amt-err" role="alert" className="text-[11px] text-red-500 mt-1">
+                {errors.amount}
+              </p>
+            )}
+            <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1">
+              {[100, 250, 500, 1000, 2000].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => {
+                    const cur = parseFloat(form.amount) || 0;
+                    setForm((p) => ({ ...p, amount: String(cur + v) }));
+                    setErrors((p) => ({ ...p, amount: undefined }));
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-card border border-card-border text-[11px] font-semibold text-muted hover:text-indigo-600 hover:border-indigo-500 shrink-0 cursor-pointer transition-all"
+                >
+                  +₹{v}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category */}
+          <div>
+            <span className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+              Expense Category
+            </span>
+            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Spending category">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => setForm((p) => ({ ...p, category: cat.id }))}
+                  aria-pressed={form.category === cat.id}
+                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    form.category === cat.id
+                      ? "bg-indigo-500/10 border-indigo-500 ring-1 ring-indigo-500 text-foreground font-bold"
+                      : "bg-card border-card-border hover:bg-muted-bg text-muted"
+                  }`}
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${cat.color}`}
+                  >
+                    {cat.label[0]}
+                  </span>
+                  <span className="text-xs truncate">{cat.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* UPI ID / VPA (Optional) */}
+          <div>
+            <label
+              htmlFor="rzp-upi"
+              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5"
+            >
+              UPI ID / Account Reference{" "}
+              <span className="text-[10px] font-normal text-muted normal-case tracking-normal">
+                (optional)
+              </span>
+            </label>
+            <input
+              id="rzp-upi"
+              type="text"
+              value={form.upiId}
+              onChange={setField("upiId")}
+              placeholder="e.g. payee@okhdfcbank"
+              autoComplete="off"
+              disabled={isLoading}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50 font-mono"
+            />
+          </div>
+
+          {/* Note */}
+          <div>
+            <label htmlFor="rzp-note" className="block text-xs font-medium text-muted mb-1">
+              Note (Optional)
+            </label>
+            <input
+              id="rzp-note"
+              type="text"
+              value={form.note}
+              onChange={setField("note")}
+              placeholder="e.g. Monthly rent, utility bill…"
+              disabled={isLoading}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50"
+            />
+          </div>
+
+          {/* Gateway security info banner */}
+          <div className="flex items-start gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2.5 text-[11px] text-indigo-700 dark:text-indigo-300">
+            <Icon name="shield" size={13} className="mt-0.5 shrink-0" />
+            <span>
+              Razorpay sandbox gateway checkout. Test cards and mock UPI can be used safely.
+              Upon successful payment, an HMAC-SHA256 signature is verified and logged to your
+              Spendly ledger.
+            </span>
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isLoading}
+              className="flex-1 py-3 rounded-xl bg-card border border-card-border text-xs font-semibold text-muted hover:bg-muted-bg cursor-pointer transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isLoading ? (
+                <>
+                  <Icon name="refresh-cw" size={14} className="animate-spin" />
+                  <span>Connecting Gateway…</span>
+                </>
+              ) : (
+                <>
+                  <Icon name="credit-card" size={14} />
+                  <span>Pay with Razorpay</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Razorpay Success Screen
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface RazorpaySuccessScreenProps {
+  transfer: CompletedTransfer;
+  onDone: () => void;
+  onViewHistory: () => void;
+}
+
+function RazorpaySuccessScreen({
+  transfer,
+  onDone,
+  onViewHistory,
+}: RazorpaySuccessScreenProps) {
+  const ts = new Date(transfer.timestamp);
+  const dateStr = ts.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const timeStr = ts.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const rows = [
+    { label: "Payee / Recipient", value: transfer.recipientName, green: false, mono: false },
+    ...(transfer.upiId && transfer.upiId !== "Razorpay Gateway"
+      ? [{ label: "UPI / Ref", value: transfer.upiId, green: false, mono: true }]
+      : []),
+    {
+      label: "Payment ID",
+      value: transfer.paymentId || transfer.transactionId,
+      green: false,
+      mono: true,
+    },
+    ...(transfer.orderId
+      ? [{ label: "Order ID", value: transfer.orderId, green: false, mono: true }]
+      : []),
+    { label: "Date & Time", value: `${dateStr}, ${timeStr}`, green: false, mono: false },
+    { label: "Category", value: transfer.category, green: false, mono: false },
+    { label: "Status", value: "Verified & Settled", green: true, mono: false },
+    {
+      label: "Security Verification",
+      value: "HMAC-SHA256 Validated",
+      green: true,
+      mono: false,
+    },
+  ];
+
+  return (
+    <div className="space-y-4 text-center">
+      <div className="flex flex-col items-center py-6 space-y-3">
+        <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 ring-4 ring-emerald-500/20">
+          <Icon name="check-circle" size={42} />
+        </div>
+        <div>
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mb-2">
+            <Icon name="shield" size={11} />
+            RAZORPAY VERIFIED
+          </span>
+          <h2 className="text-xl font-extrabold text-foreground">Transfer Successful</h2>
+        </div>
+        <p className="text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
+          {formatINR(transfer.amount)}
+        </p>
+      </div>
+
+      <Card className="text-left divide-y divide-card-border overflow-hidden">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between px-4 py-3.5">
+            <span className="text-xs text-muted">{row.label}</span>
+            <span
+              className={`text-sm font-semibold ${
+                row.green ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+              } ${row.mono ? "font-mono text-xs" : ""}`}
+            >
+              {row.value}
+            </span>
+          </div>
+        ))}
+      </Card>
+
+      <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-[11px] text-emerald-700 dark:text-emerald-400 text-left">
+        <Icon name="check" size={13} className="mt-0.5 shrink-0" />
+        <span>
+          Payment verified by Razorpay and recorded in your Spendly financial ledger.
+          Budget limits and overspend checks have been automatically processed.
+        </span>
+      </div>
+
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={onViewHistory}
+          className="flex-1 py-3 rounded-xl bg-card border border-card-border text-xs font-semibold text-muted hover:bg-muted-bg cursor-pointer transition-colors"
+        >
+          View in History
+        </button>
+        <button
+          type="button"
+          onClick={onDone}
+          className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 cursor-pointer transition-opacity shadow-sm"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Review Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1337,12 +1852,36 @@ function RecentTransfers({ transfers }: { transfers: CompletedTransfer[] }) {
       <div className="divide-y divide-card-border overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
         {transfers.slice(0, 10).map((t) => (
           <div key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted-bg transition-colors">
-            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${CATEGORY_COLOR[t.category] ?? "bg-slate-500/10 text-slate-500"}`}>
-              <Icon name="send" size={17} />
+            <span
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                t.isVerified || t.paymentId
+                  ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                  : CATEGORY_COLOR[t.category] ?? "bg-slate-500/10 text-slate-500"
+              }`}
+            >
+              {t.isVerified || t.paymentId ? (
+                <Icon name="credit-card" size={17} />
+              ) : (
+                <Icon name="send" size={17} />
+              )}
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">{t.recipientName}</p>
-              <p className="text-xs text-muted truncate">{t.upiId}</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="text-sm font-semibold text-foreground truncate">{t.recipientName}</p>
+                {t.isVerified || t.paymentId ? (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                    <Icon name="check" size={9} />
+                    VERIFIED
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                    DEMO
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted truncate font-mono">
+                {t.paymentId ? `Razorpay: ${t.paymentId}` : t.upiId}
+              </p>
             </div>
             <div className="text-right shrink-0">
               <p className="text-sm font-semibold text-foreground">{formatINR(t.amount)}</p>
@@ -1372,6 +1911,7 @@ function relativeTransferDate(isoString: string, now: number): string {
 
 export default function TransferPage() {
   const isMobile = useIsMobile();
+  const { data: session } = useSession();
 
   // ── Demo transfer flow state ──
   const [step, setStep] = useState<TransferStep>("home");
@@ -1386,6 +1926,11 @@ export default function TransferPage() {
   const [upiPayData, setUpiPayData] = useState<UpiPayFormData | null>(null);
   // Track which flow opened the QR scanner so we route the result correctly
   const [qrOrigin, setQrOrigin] = useState<"demo" | "upi">("demo");
+
+  // ── Razorpay gateway flow state ──
+  const [razorpayFormData, setRazorpayFormData] = useState<TransferFormData | null>(null);
+  const [isRazorpayLoading, setIsRazorpayLoading] = useState(false);
+  const [razorpayError, setRazorpayError] = useState<string | null>(null);
 
   // ── Demo flow: QR scanned → pre-fill demo transfer form ──
   const handleDemoQRScanned = useCallback((data: { recipientName: string; upiId: string }) => {
@@ -1409,6 +1954,136 @@ export default function TransferPage() {
     });
     setStep("upi-pay-form");
   }, []);
+
+  // ── Razorpay flow: initiate order and open checkout modal ──
+  const handleRazorpayProceed = useCallback(
+    async (data: TransferFormData) => {
+      setRazorpayFormData(data);
+      setIsRazorpayLoading(true);
+      setRazorpayError(null);
+
+      try {
+        // 1. Create order on server
+        const orderRes = await fetch("/api/razorpay/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: parseFloat(data.amount),
+            recipientName: data.recipientName,
+            upiId: data.upiId,
+            category: data.category,
+            note: data.note,
+          }),
+        });
+
+        const orderData = await orderRes.json();
+        if (!orderRes.ok || !orderData.success) {
+          throw new Error(orderData.error || "Failed to initialize payment gateway order.");
+        }
+
+        // 2. Load Razorpay Checkout SDK
+        const scriptLoaded = await loadRazorpayCheckoutScript();
+        const win = window as unknown as { Razorpay?: new (opts: unknown) => { open: () => void; on: (evt: string, cb: (res: unknown) => void) => void } };
+        if (!scriptLoaded || !win.Razorpay) {
+          throw new Error("Unable to load Razorpay payment SDK. Please verify your connection.");
+        }
+
+        // 3. Configure Razorpay modal
+        const options = {
+          key: orderData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TfUDVxRMXrslUg",
+          amount: orderData.amount, // in paise
+          currency: orderData.currency || "INR",
+          name: "Spendly Transfer",
+          description: data.recipientName
+            ? `Transfer to ${data.recipientName}`
+            : "Transfer via Spendly",
+          order_id: orderData.orderId,
+          handler: async function (response: {
+            razorpay_payment_id: string;
+            razorpay_order_id: string;
+            razorpay_signature: string;
+          }) {
+            setIsRazorpayLoading(true);
+            try {
+              // 4. Verify payment signature on server & record ledger entry
+              const verifyRes = await fetch("/api/razorpay/verify-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  transferDetails: {
+                    amount: parseFloat(data.amount),
+                    category: data.category,
+                    recipientName: data.recipientName,
+                    upiId: data.upiId,
+                    note: data.note,
+                  },
+                }),
+              });
+
+              const verifyData = await verifyRes.json();
+              if (!verifyRes.ok || !verifyData.success) {
+                throw new Error(verifyData.error || "Payment verification failed.");
+              }
+
+              const completed: CompletedTransfer = {
+                id: verifyData.transactionId || crypto.randomUUID(),
+                recipientName: data.recipientName,
+                upiId: data.upiId || "Razorpay Gateway",
+                amount: parseFloat(data.amount),
+                category: data.category,
+                note: data.note,
+                timestamp: new Date().toISOString(),
+                transactionId: response.razorpay_payment_id,
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+                isVerified: true,
+              };
+
+              const updated = [completed, ...transfers].slice(0, 50);
+              setTransfers(updated);
+              saveTransfers(updated);
+              setCompletedTransfer(completed);
+              setIsRazorpayLoading(false);
+              setStep("razorpay-success");
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : "Payment verification failed.";
+              setIsRazorpayLoading(false);
+              setRazorpayError(msg);
+            }
+          },
+          prefill: {
+            name: session?.user?.name || "",
+            email: session?.user?.email || "",
+          },
+          theme: {
+            color: "#4f46e5", // Indigo theme for Razorpay
+          },
+          modal: {
+            ondismiss: function () {
+              setIsRazorpayLoading(false);
+            },
+          },
+        };
+
+        const rzp = new win.Razorpay(options);
+        rzp.on("payment.failed", function (failResp: unknown) {
+          const failureObj = failResp as { error?: { description?: string } };
+          console.error("Razorpay Payment Failed:", failureObj?.error);
+          setIsRazorpayLoading(false);
+          setRazorpayError(failureObj?.error?.description || "Payment failed or was declined.");
+        });
+        rzp.open();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to initiate payment.";
+        setIsRazorpayLoading(false);
+        setRazorpayError(msg);
+      }
+    },
+    [session, transfers],
+  );
 
   // ── Demo flow: confirm the simulated transfer ──
   const handleConfirm = useCallback(async () => {
@@ -1526,8 +2201,18 @@ export default function TransferPage() {
       {/* ── HOME ── */}
       {step === "home" && (
         <div className="space-y-6">
-          {/* ── Pay via UPI card (top / primary) ── */}
-          <div className="dashboard-enter" style={{ animationDelay: "80ms" }}>
+          {/* ── Pay via Razorpay Gateway Card (Top Primary) ── */}
+          <div className="dashboard-enter" style={{ animationDelay: "50ms" }}>
+            <PayViaRazorpayCard
+              onStartPayment={() => {
+                setRazorpayError(null);
+                setStep("razorpay-form");
+              }}
+            />
+          </div>
+
+          {/* ── Pay via UPI card (Native app redirect) ── */}
+          <div className="dashboard-enter" style={{ animationDelay: "120ms" }}>
             <PayViaUpiCard
               isMobile={isMobile}
               onEnterUpiId={() => { setUpiPayData(null); setStep("upi-pay-form"); }}
@@ -1536,15 +2221,15 @@ export default function TransferPage() {
           </div>
 
           {/* OR divider */}
-          <div className="dashboard-enter flex items-center gap-3" style={{ animationDelay: "160ms" }}>
+          <div className="dashboard-enter flex items-center gap-3" style={{ animationDelay: "180ms" }}>
             <div className="flex-1 h-px bg-card-border" />
-            <span className="text-[11px] font-bold text-muted uppercase tracking-wider">or</span>
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider">or demo mode</span>
             <div className="flex-1 h-px bg-card-border" />
           </div>
 
           {/* ── Demo section (below) ── */}
           {/* Demo action cards */}
-          <div className="dashboard-enter grid grid-cols-2 gap-3" style={{ animationDelay: "220ms" }}>
+          <div className="dashboard-enter grid grid-cols-2 gap-3" style={{ animationDelay: "240ms" }}>
             <button
               type="button"
               onClick={() => setStep("form")}
@@ -1594,6 +2279,45 @@ export default function TransferPage() {
           <div className="dashboard-enter" style={{ animationDelay: "440ms" }}>
             <RecentTransfers transfers={transfers} />
           </div>
+        </div>
+      )}
+
+      {/* ── RAZORPAY FORM ── */}
+      {step === "razorpay-form" && (
+        <div className="dashboard-enter mt-2" style={{ animationDelay: "0ms" }}>
+          <RazorpayTransferForm
+            initial={razorpayFormData ?? undefined}
+            onProceed={handleRazorpayProceed}
+            onCancel={() => {
+              setRazorpayFormData(null);
+              setRazorpayError(null);
+              setStep("home");
+            }}
+            isLoading={isRazorpayLoading}
+            error={razorpayError}
+          />
+        </div>
+      )}
+
+      {/* ── RAZORPAY SUCCESS ── */}
+      {step === "razorpay-success" && completedTransfer && (
+        <div className="dashboard-enter mt-2" style={{ animationDelay: "0ms" }}>
+          <RazorpaySuccessScreen
+            transfer={completedTransfer}
+            onDone={() => {
+              setStep("home");
+              setRazorpayFormData(null);
+              setCompletedTransfer(null);
+            }}
+            onViewHistory={() => {
+              setStep("home");
+              setRazorpayFormData(null);
+              setCompletedTransfer(null);
+              setTimeout(() => {
+                document.querySelector(".recent-transfers-section")?.scrollIntoView({ behavior: "smooth" });
+              }, 100);
+            }}
+          />
         </div>
       )}
 

@@ -26,7 +26,7 @@ const VALID_CATEGORIES = [
 //      case where the user edits/deletes a transaction bringing them back
 //      under budget and then later exceeds the limit again.
 // ---------------------------------------------------------------------------
-async function checkAndSendOverspendAlert(
+export async function checkAndSendOverspendAlert(
   userId: string,
   userEmail: string | null | undefined,
   userName: string | null | undefined,

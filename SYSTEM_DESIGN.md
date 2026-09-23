@@ -255,11 +255,56 @@ sequenceDiagram
 
 ---
 
-## 6. Strategic Winning Pillars for IBM Hackathon
+## 6. Payment Gateway & Transfer Workflow (Razorpay Integration)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as Next.js Web/Mobile UI
+    participant Backend as Next.js API Routes (/api/razorpay/*)
+    participant Razorpay as Razorpay Gateway Server
+    participant DB as PostgreSQL (Supabase)
+    participant Email as Email / Notification Service
+
+    User->>App: Enter transfer details (Recipient, UPI/Account, Amount, Category)
+    User->>App: Click "Pay via Razorpay"
+    App->>Backend: POST /api/razorpay/create-order (amount, category, recipient)
+    Note over Backend: Convert amount to integer paise (1 INR = 100 paise)
+    Backend->>Razorpay: POST https://api.razorpay.com/v1/orders (Basic Auth: key_id:key_secret)
+    Razorpay-->>Backend: Return order object { id: "order_...", amount, currency: "INR" }
+    Backend-->>App: Return { orderId, amount, currency, key: RAZORPAY_KEY_ID }
+
+    App->>User: Launch Razorpay Checkout Modal (UPI, Cards, Netbanking, Wallets)
+    User->>Razorpay: Authenticate & Pay (UPI PIN / 3DS OTP)
+    Razorpay-->>App: Payment Success callback { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+
+    App->>Backend: POST /api/razorpay/verify-payment { order_id, payment_id, signature, transferDetails }
+    Note over Backend: Cryptographic Verification:<br/>HMAC_SHA256(order_id + "|" + payment_id, secret) === signature
+    
+    alt Signature Valid
+        Backend->>DB: INSERT into transactions (type: "expense", source: "MANUAL", merchant, paise)
+        Backend->>Email: checkAndSendOverspendAlert(userId, amount)
+        Backend-->>App: { success: true, transactionId, paymentId }
+        App->>User: Display Verified Success Screen with Real Razorpay Payment ID
+    else Signature Tampered / Invalid
+        Backend-->>App: HTTP 400 { error: "Invalid payment signature" }
+        App->>User: Display Payment Verification Error
+    end
+```
+
+### Cryptographic Security & Ledger Invariance
+- **No Client-Side Price Tampering:** The client never dictates the finalized charge amount to Razorpay. The amount is registered in the order on the backend before the checkout modal opens.
+- **HMAC-SHA256 Signature Verification:** Every payment response is cryptographically validated using the server-side `RAZORPAY_KEY_SECRET`. An attacker cannot spoof a client-side callback without knowledge of the secret key.
+- **Deterministic Ledger Insertion:** Verified payments instantly become immutable records in the `transactions` table, guaranteeing that actual transfers directly feed into Safe-to-Spend calculations, Plan vs Actual budgets, and overspending guards.
+
+---
+
+## 7. Strategic Winning Pillars for IBM Hackathon
 
 | Pillar | Technical Implementation | Hackathon Impact |
 | :--- | :--- | :--- |
 | **1. IBM Watsonx & Granite 3.0** | Integrated `@ibm-cloud/watsonx-ai` calling Granite 3.0/3.1 8B Instruct with structured context injection. | Direct alignment with IBM AI stack and SkillsBuild evaluation criteria. |
 | **2. Zero-Hallucination Math** | Structured Metric Aggregator + Deterministic Purchase Simulator. | Solves the primary flaw of AI in FinTech: Eliminates math hallucinations and grounds answers in verifiable data. |
-| **3. India DPI / Account Aggregator** | Real Setu AA Consent, Data Session, and UPI Normalization Pipeline. | Demonstrates real-world enterprise applicability in India's regulated FinTech landscape. |
+| **3. India DPI / Account Aggregator & Razorpay** | Real Setu AA Consent & Bank Statement Sync + Razorpay Payment Gateway Integration. | Demonstrates end-to-end full-loop capability: Read bank data (AA) + Execute verified payments (Razorpay). |
 | **4. Interactive "Can I Afford This?" Decisioning** | Purchase simulator with real-time Safe-to-Spend impact analysis. | Transforms the app from a passive ledger into an indispensable financial decision copilot. |

@@ -17,6 +17,14 @@ import { Card } from "@/components/ui/Card";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { formatINR } from "@/lib/format";
 import type { Category } from "@/lib/types";
+import {
+  RazorpayGatewayHeroArt,
+  UpiMobileArt,
+  TransferSuccessArt,
+  EmptyTransfersArt,
+  SecurityShieldArt,
+  PaymentNetworkBadges,
+} from "@/components/ui/VectorArt";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -606,207 +614,7 @@ function QRScanner({ onScanned, onClose }: QRScannerProps) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Transfer Form
-// ─────────────────────────────────────────────────────────────────────────────
 
-interface TransferFormProps {
-  initial?: Partial<TransferFormData>;
-  onReview: (data: TransferFormData) => void;
-  onCancel: () => void;
-}
-
-function TransferForm({ initial, onReview, onCancel }: TransferFormProps) {
-  const [form, setForm] = useState<TransferFormData>({
-    recipientName: initial?.recipientName ?? "",
-    upiId: initial?.upiId ?? "",
-    amount: initial?.amount ?? "",
-    note: initial?.note ?? "",
-    category: initial?.category ?? "Others",
-  });
-  const [errors, setErrors] = useState<Partial<Record<keyof TransferFormData, string>>>({});
-  const amountInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (initial?.upiId && !initial?.amount) {
-      const timer = setTimeout(() => amountInputRef.current?.focus(), 50);
-      return () => clearTimeout(timer);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const validate = (): boolean => {
-    const e: typeof errors = {};
-    // recipientName is intentionally NOT validated — it is optional
-    if (!form.upiId.trim()) {
-      e.upiId = "Please enter a UPI ID.";
-    } else if (!validateUpiId(form.upiId)) {
-      e.upiId = "Enter a valid UPI ID (e.g. name@upi)";
-    }
-    const numAmount = parseFloat(form.amount);
-    if (!form.amount.trim()) {
-      e.amount = "Please enter an amount.";
-    } else if (isNaN(numAmount) || numAmount <= 0) {
-      e.amount = "Enter an amount greater than ₹0.";
-    } else if (numAmount > 100000) {
-      e.amount = "Maximum transfer amount is ₹1,00,000.";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (validate()) onReview(form);
-  };
-
-  const setField = (field: keyof TransferFormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
-    setErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 px-1">
-        <button type="button" onClick={onCancel} aria-label="Back" className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted-bg text-muted cursor-pointer">
-          <Icon name="arrow-right" size={16} className="rotate-180" />
-        </button>
-        <div>
-          <h2 className="text-lg font-bold text-foreground">Send Money</h2>
-          <p className="text-xs text-muted">Enter recipient details and amount</p>
-        </div>
-      </div>
-
-      <Card className="p-4 sm:p-5">
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          {/* UPI ID — required */}
-          <div>
-            <label htmlFor="tf-upi" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
-              UPI ID <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="tf-upi"
-              type="text"
-              value={form.upiId}
-              onChange={setField("upiId")}
-              placeholder="e.g. rahul@demo"
-              autoComplete="off"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50 font-mono"
-              aria-describedby={errors.upiId ? "tf-upi-err" : undefined}
-            />
-            {errors.upiId && <p id="tf-upi-err" role="alert" className="text-[11px] text-red-500 mt-1">{errors.upiId}</p>}
-          </div>
-
-          {/* Recipient Name — optional */}
-          <div>
-            <label htmlFor="tf-name" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
-              Recipient Name <span className="text-[10px] font-normal text-muted normal-case tracking-normal">(optional)</span>
-            </label>
-            <input
-              id="tf-name"
-              type="text"
-              value={form.recipientName}
-              onChange={setField("recipientName")}
-              placeholder="e.g. Rahul Sharma"
-              autoComplete="off"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50"
-            />
-          </div>
-
-          {/* Amount */}
-          <div>
-            <label htmlFor="tf-amount" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
-              Amount <span className="text-red-500">*</span>
-            </label>
-            <div className="relative flex items-center">
-              <span className="absolute left-4 text-xl font-bold text-muted pointer-events-none">₹</span>
-              <input
-                id="tf-amount"
-                ref={amountInputRef}
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={form.amount}
-                onChange={setField("amount")}
-                placeholder="0.00"
-                className="w-full pl-9 pr-4 py-3 text-2xl font-bold rounded-2xl bg-muted-bg border border-card-border text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/30 font-mono"
-                aria-describedby={errors.amount ? "tf-amt-err" : undefined}
-              />
-            </div>
-            {errors.amount && <p id="tf-amt-err" role="alert" className="text-[11px] text-red-500 mt-1">{errors.amount}</p>}
-            <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1">
-              {[100, 250, 500, 1000, 2000].map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => {
-                    const cur = parseFloat(form.amount) || 0;
-                    setForm((p) => ({ ...p, amount: String(cur + v) }));
-                    setErrors((p) => ({ ...p, amount: undefined }));
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-card border border-card-border text-[11px] font-semibold text-muted hover:text-primary hover:border-primary shrink-0 cursor-pointer transition-all"
-                >
-                  +₹{v}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Category */}
-          <div>
-            <span className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Category</span>
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Spending category">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setForm((p) => ({ ...p, category: cat.id }))}
-                  aria-pressed={form.category === cat.id}
-                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    form.category === cat.id
-                      ? "bg-primary-soft/50 border-primary ring-1 ring-primary text-foreground font-bold"
-                      : "bg-card border-card-border hover:bg-muted-bg text-muted"
-                  }`}
-                >
-                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${cat.color}`}>
-                    {cat.label[0]}
-                  </span>
-                  <span className="text-xs truncate">{cat.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Note */}
-          <div>
-            <label htmlFor="tf-note" className="block text-xs font-medium text-muted mb-1">Note (Optional)</label>
-            <input
-              id="tf-note"
-              type="text"
-              value={form.note}
-              onChange={setField("note")}
-              placeholder="e.g. Lunch, groceries…"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50"
-            />
-          </div>
-
-          {/* ── Demo transfer actions ── */}
-          <div className="pt-2 space-y-3">
-            <DisclaimerBanner />
-            <div className="flex gap-2.5">
-              <button type="button" onClick={onCancel} className="flex-1 py-3 rounded-xl bg-card border border-card-border text-xs font-semibold text-muted hover:bg-muted-bg cursor-pointer transition-colors">
-                Cancel
-              </button>
-              <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-sm">
-                Review Transfer
-              </button>
-            </div>
-          </div>
-        </form>
-      </Card>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mobile detection hook
@@ -1145,70 +953,67 @@ interface PayViaUpiCardProps {
 
 function PayViaUpiCard({ isMobile, onEnterUpiId, onScanQr }: PayViaUpiCardProps) {
   return (
-    <div className="rounded-2xl border border-blue-500/20 bg-card shadow-card overflow-hidden">
+    <div className="rounded-3xl border border-blue-500/20 bg-card shadow-card overflow-hidden">
       {/* Card header */}
-      <div className="px-5 pt-5 pb-4 border-b border-card-border bg-gradient-to-br from-blue-500/5 to-transparent">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-base font-bold text-foreground">Pay via UPI</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
-                <Icon name="send" size={9} />
-                REAL
-              </span>
-            </div>
-            <p className="text-xs text-muted leading-snug">Pay directly using your preferred UPI app</p>
-          </div>
-          <span className="shrink-0 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/10 text-2xl" aria-hidden="true">
-            📱
+      <div className="px-5 pt-5 pb-3 border-b border-card-border/60 bg-gradient-to-br from-blue-500/5 to-transparent flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
+            <Icon name="send" size={10} />
+            DIRECT MOBILE UPI
           </span>
+          <h2 className="text-sm font-bold text-foreground">Pay via Installed App</h2>
         </div>
+        <span className="text-[11px] text-muted hidden sm:inline">GPay • PhonePe • Paytm</span>
       </div>
 
-      {/* Card body */}
-      <div className="p-5">
-        {isMobile ? (
-          <div className="space-y-3">
-            {/* Two action buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={onEnterUpiId}
-                className="group flex flex-col items-center gap-2.5 rounded-xl border border-card-border bg-muted-bg p-4 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all cursor-pointer"
-                aria-label="Enter UPI ID to pay"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-transform group-hover:scale-105">
-                  <Icon name="pencil" size={18} />
-                </span>
-                <div className="text-center">
-                  <p className="text-xs font-bold text-foreground">Enter UPI ID</p>
-                  <p className="text-[10px] text-muted mt-0.5 leading-tight">Enter recipient details</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={onScanQr}
-                className="group flex flex-col items-center gap-2.5 rounded-xl border border-card-border bg-muted-bg p-4 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all cursor-pointer"
-                aria-label="Scan QR code to pay"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-transform group-hover:scale-105">
-                  <Icon name="qr-code" size={18} />
-                </span>
-                <div className="text-center">
-                  <p className="text-xs font-bold text-foreground">Scan QR</p>
-                  <p className="text-[10px] text-muted mt-0.5 leading-tight">Scan recipient QR</p>
-                </div>
-              </button>
-            </div>
-
-            <p className="text-[10px] text-muted text-center leading-snug">
-              Works with Google Pay, PhonePe, BHIM, Paytm &amp; other UPI apps
+      <div className="p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
+          {/* Left / Top Info */}
+          <div className="flex-1 w-full space-y-3">
+            <p className="text-xs text-muted leading-relaxed">
+              Launch your preferred UPI app directly to complete the transfer via standard UPI URI handoff.
             </p>
+
+            {isMobile ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={onEnterUpiId}
+                  className="group flex flex-col items-center gap-2.5 rounded-2xl border border-card-border bg-muted-bg/60 p-4 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all cursor-pointer text-center"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-transform group-hover:scale-105 shadow-2xs">
+                    <Icon name="pencil" size={22} />
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold text-foreground">Enter UPI ID</p>
+                    <p className="text-[10px] text-muted mt-0.5">Send to virtual address</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onScanQr}
+                  className="group flex flex-col items-center gap-2.5 rounded-2xl border border-card-border bg-muted-bg/60 p-4 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all cursor-pointer text-center"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-transform group-hover:scale-105 shadow-2xs">
+                    <Icon name="qr-code" size={22} />
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold text-foreground">Scan UPI QR</p>
+                    <p className="text-[10px] text-muted mt-0.5">Point camera to scan</p>
+                  </div>
+                </button>
+              </div>
+            ) : (
+              <UpiDesktopInfo />
+            )}
           </div>
-        ) : (
-          <UpiDesktopInfo />
-        )}
+
+          {/* Right Vector Illustration */}
+          <div className="shrink-0 hidden sm:flex items-center justify-center">
+            <UpiMobileArt size={120} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1224,74 +1029,73 @@ interface PayViaRazorpayCardProps {
 
 function PayViaRazorpayCard({ onStartPayment }: PayViaRazorpayCardProps) {
   return (
-    <div className="rounded-2xl border border-indigo-500/20 bg-card shadow-card overflow-hidden">
-      {/* Card header */}
-      <div className="px-5 pt-5 pb-4 border-b border-card-border bg-gradient-to-br from-indigo-500/10 via-primary/5 to-transparent">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-base font-bold text-foreground">Pay via Razorpay</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                <Icon name="shield" size={10} />
-                SECURE GATEWAY
-              </span>
-            </div>
-            <p className="text-xs text-muted leading-snug">
-              Instant transfer via Cards, UPI, Netbanking &amp; Wallets
-            </p>
-          </div>
-          <span
-            className="shrink-0 flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-            aria-hidden="true"
-          >
-            <Icon name="credit-card" size={20} />
+    <div className="relative rounded-3xl border border-indigo-500/25 bg-gradient-to-br from-indigo-500/10 via-card to-card shadow-card overflow-hidden transition-all duration-300 hover:border-indigo-500/40 hover:shadow-md">
+      {/* Background soft ambient gradient mesh */}
+      <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
+
+      {/* Header bar */}
+      <div className="relative px-5 pt-5 pb-3 border-b border-card-border/60 flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+            Instant Verified Gateway
           </span>
         </div>
+        <PaymentNetworkBadges />
       </div>
 
-      {/* Card body */}
-      <div className="p-5 space-y-4">
-        {/* Payment channels supported */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <div className="flex items-center gap-2 rounded-xl bg-muted-bg/60 border border-card-border px-3 py-2 text-xs">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 font-bold text-[10px]">
-              💳
-            </span>
-            <span className="text-[11px] font-medium text-foreground truncate">Credit/Debit Cards</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl bg-muted-bg/60 border border-card-border px-3 py-2 text-xs">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-[10px]">
-              ⚡
-            </span>
-            <span className="text-[11px] font-medium text-foreground truncate">UPI &amp; QR</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl bg-muted-bg/60 border border-card-border px-3 py-2 text-xs">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 font-bold text-[10px]">
-              🏛️
-            </span>
-            <span className="text-[11px] font-medium text-foreground truncate">Net Banking</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl bg-muted-bg/60 border border-card-border px-3 py-2 text-xs">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500 font-bold text-[10px]">
-              👛
-            </span>
-            <span className="text-[11px] font-medium text-foreground truncate">Wallets</span>
-          </div>
-        </div>
+      {/* Main Content Layout */}
+      <div className="relative p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
+          {/* Left Column: Value Prop & CTA */}
+          <div className="flex-1 text-center sm:text-left space-y-3">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                Pay via Razorpay
+              </h2>
+              <p className="text-xs text-muted mt-1 max-w-sm leading-relaxed">
+                Seamless transfer using Debit/Credit Cards, UPI, Netbanking &amp; Wallets with instant cryptographic ledger verification.
+              </p>
+            </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-          <div className="text-[11px] text-muted flex items-center gap-1.5">
-            <Icon name="check-circle" size={13} className="text-emerald-500 shrink-0" />
-            <span>Automatic ledger sync &amp; budget overspend check</span>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="flex items-center gap-2 rounded-xl bg-card border border-card-border px-3 py-2 text-left">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500 font-bold text-xs">
+                  ⚡
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">Instant Settle</p>
+                  <p className="text-[10px] text-muted truncate">Real-time sync</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 rounded-xl bg-card border border-card-border px-3 py-2 text-left">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                  🔒
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">256-bit SSL</p>
+                  <p className="text-[10px] text-muted truncate">HMAC Verified</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onStartPayment}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              >
+                <span>Transfer with Razorpay</span>
+                <Icon name="arrow-right" size={16} />
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onStartPayment}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-          >
-            <span>Transfer with Razorpay</span>
-            <Icon name="arrow-right" size={14} />
-          </button>
+
+          {/* Right Column: Hero Vector Illustration */}
+          <div className="shrink-0 flex items-center justify-center">
+            <RazorpayGatewayHeroArt size={150} />
+          </div>
         </div>
       </div>
     </div>
@@ -1325,16 +1129,23 @@ function RazorpayTransferForm({
     category: initial?.category ?? "Others",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof TransferFormData, string>>>({});
+  const upiInputRef = useRef<HTMLInputElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    amountInputRef.current?.focus();
-  }, []);
+    if (initial?.upiId && !initial?.amount) {
+      amountInputRef.current?.focus();
+    } else {
+      upiInputRef.current?.focus();
+    }
+  }, [initial]);
 
   const validate = (): boolean => {
     const e: typeof errors = {};
-    if (!form.recipientName.trim()) {
-      e.recipientName = "Please enter a recipient or payee name.";
+    if (!form.upiId.trim()) {
+      e.upiId = "Please enter recipient UPI ID.";
+    } else if (!validateUpiId(form.upiId)) {
+      e.upiId = "Enter a valid UPI ID (e.g. payee@okhdfcbank or rahul@upi)";
     }
     const numAmount = parseFloat(form.amount);
     if (!form.amount.trim()) {
@@ -1363,72 +1174,97 @@ function RazorpayTransferForm({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center gap-2 px-1">
         <button
           type="button"
           onClick={onCancel}
           disabled={isLoading}
           aria-label="Back"
-          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted-bg text-muted cursor-pointer disabled:opacity-50"
+          className="flex h-9 w-9 items-center justify-center rounded-2xl hover:bg-muted-bg text-muted cursor-pointer disabled:opacity-50 transition-colors"
         >
-          <Icon name="arrow-right" size={16} className="rotate-180" />
+          <Icon name="arrow-right" size={18} className="rotate-180" />
         </button>
         <div>
           <h2 className="text-lg font-bold text-foreground">Razorpay Transfer</h2>
           <p className="text-xs text-muted">Pay via Cards, UPI, Netbanking or Wallets</p>
         </div>
         <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-          <Icon name="shield" size={10} />
+          <Icon name="shield" size={11} />
           TEST GATEWAY
         </span>
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400">
-          <Icon name="alert-triangle" size={15} className="mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2.5 rounded-2xl border border-red-500/20 bg-red-500/10 p-3.5 text-xs text-red-600 dark:text-red-400">
+          <Icon name="alert-triangle" size={16} className="mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      <Card className="p-4 sm:p-5">
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          {/* Recipient / Payee Name */}
+      <Card className="p-5 sm:p-6 space-y-5 rounded-3xl">
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          {/* Recipient UPI ID — MANDATORY */}
+          <div>
+            <label
+              htmlFor="rzp-upi"
+              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2"
+            >
+              Recipient UPI ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="rzp-upi"
+              ref={upiInputRef}
+              type="text"
+              inputMode="email"
+              value={form.upiId}
+              onChange={setField("upiId")}
+              placeholder="e.g. payee@okhdfcbank or rahul@upi"
+              autoComplete="off"
+              disabled={isLoading}
+              className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50 font-mono"
+              aria-describedby={errors.upiId ? "rzp-upi-err" : undefined}
+            />
+            {errors.upiId && (
+              <p id="rzp-upi-err" role="alert" className="text-[11px] text-red-500 mt-1.5 font-medium">
+                {errors.upiId}
+              </p>
+            )}
+          </div>
+
+          {/* Recipient / Payee Name — OPTIONAL */}
           <div>
             <label
               htmlFor="rzp-recipient"
-              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5"
+              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2"
             >
-              Recipient / Payee Name <span className="text-red-500">*</span>
+              Payee / Recipient Name{" "}
+              <span className="text-[10px] font-normal text-muted normal-case tracking-normal">
+                (optional)
+              </span>
             </label>
             <input
               id="rzp-recipient"
               type="text"
               value={form.recipientName}
               onChange={setField("recipientName")}
-              placeholder="e.g. Rahul Sharma / Amazon / Landlord"
+              placeholder="e.g. Rahul Sharma (optional)"
               autoComplete="off"
               disabled={isLoading}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50"
-              aria-describedby={errors.recipientName ? "rzp-rec-err" : undefined}
+              className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50"
             />
-            {errors.recipientName && (
-              <p id="rzp-rec-err" role="alert" className="text-[11px] text-red-500 mt-1">
-                {errors.recipientName}
-              </p>
-            )}
           </div>
 
-          {/* Amount */}
+          {/* Amount Section */}
           <div>
             <label
               htmlFor="rzp-amount"
-              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5"
+              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2"
             >
               Amount <span className="text-red-500">*</span>
             </label>
             <div className="relative flex items-center">
-              <span className="absolute left-4 text-xl font-bold text-muted pointer-events-none">₹</span>
+              <span className="absolute left-4 text-2xl font-bold text-muted pointer-events-none">₹</span>
               <input
                 id="rzp-amount"
                 ref={amountInputRef}
@@ -1439,17 +1275,19 @@ function RazorpayTransferForm({
                 onChange={setField("amount")}
                 placeholder="0.00"
                 disabled={isLoading}
-                className="w-full pl-9 pr-4 py-3 text-2xl font-bold rounded-2xl bg-muted-bg border border-card-border text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/30 font-mono"
+                className="w-full pl-10 pr-4 py-3.5 text-3xl font-extrabold rounded-2xl bg-muted-bg border border-card-border text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/30 font-mono"
                 aria-describedby={errors.amount ? "rzp-amt-err" : undefined}
               />
             </div>
             {errors.amount && (
-              <p id="rzp-amt-err" role="alert" className="text-[11px] text-red-500 mt-1">
+              <p id="rzp-amt-err" role="alert" className="text-[11px] text-red-500 mt-1.5 font-medium">
                 {errors.amount}
               </p>
             )}
-            <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1">
-              {[100, 250, 500, 1000, 2000].map((v) => (
+
+            {/* Quick Amount Pills */}
+            <div className="flex gap-2 mt-2.5 overflow-x-auto pb-1">
+              {[100, 500, 1000, 2000, 5000].map((v) => (
                 <button
                   key={v}
                   type="button"
@@ -1459,20 +1297,20 @@ function RazorpayTransferForm({
                     setForm((p) => ({ ...p, amount: String(cur + v) }));
                     setErrors((p) => ({ ...p, amount: undefined }));
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-card border border-card-border text-[11px] font-semibold text-muted hover:text-indigo-600 hover:border-indigo-500 shrink-0 cursor-pointer transition-all"
+                  className="px-3 py-1.5 rounded-xl bg-card border border-card-border text-xs font-bold text-muted hover:text-indigo-600 hover:border-indigo-500 shrink-0 cursor-pointer transition-all shadow-2xs"
                 >
-                  +₹{v}
+                  +₹{v.toLocaleString("en-IN")}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Category */}
+          {/* Expense Category */}
           <div>
-            <span className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+            <span className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">
               Expense Category
             </span>
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Spending category">
+            <div className="grid grid-cols-3 gap-2.5" role="group" aria-label="Spending category">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
@@ -1480,14 +1318,14 @@ function RazorpayTransferForm({
                   disabled={isLoading}
                   onClick={() => setForm((p) => ({ ...p, category: cat.id }))}
                   aria-pressed={form.category === cat.id}
-                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     form.category === cat.id
-                      ? "bg-indigo-500/10 border-indigo-500 ring-1 ring-indigo-500 text-foreground font-bold"
+                      ? "bg-indigo-500/10 border-indigo-500 ring-2 ring-indigo-500 text-foreground font-bold shadow-xs"
                       : "bg-card border-card-border hover:bg-muted-bg text-muted"
                   }`}
                 >
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${cat.color}`}
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${cat.color}`}
                   >
                     {cat.label[0]}
                   </span>
@@ -1497,32 +1335,9 @@ function RazorpayTransferForm({
             </div>
           </div>
 
-          {/* UPI ID / VPA (Optional) */}
-          <div>
-            <label
-              htmlFor="rzp-upi"
-              className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5"
-            >
-              UPI ID / Account Reference{" "}
-              <span className="text-[10px] font-normal text-muted normal-case tracking-normal">
-                (optional)
-              </span>
-            </label>
-            <input
-              id="rzp-upi"
-              type="text"
-              value={form.upiId}
-              onChange={setField("upiId")}
-              placeholder="e.g. payee@okhdfcbank"
-              autoComplete="off"
-              disabled={isLoading}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50 font-mono"
-            />
-          </div>
-
           {/* Note */}
           <div>
-            <label htmlFor="rzp-note" className="block text-xs font-medium text-muted mb-1">
+            <label htmlFor="rzp-note" className="block text-xs font-medium text-muted mb-1.5">
               Note (Optional)
             </label>
             <input
@@ -1530,45 +1345,43 @@ function RazorpayTransferForm({
               type="text"
               value={form.note}
               onChange={setField("note")}
-              placeholder="e.g. Monthly rent, utility bill…"
+              placeholder="e.g. Monthly rent, groceries, utility bill…"
               disabled={isLoading}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50"
+              className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-xs text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50"
             />
           </div>
 
-          {/* Gateway security info banner */}
-          <div className="flex items-start gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2.5 text-[11px] text-indigo-700 dark:text-indigo-300">
-            <Icon name="shield" size={13} className="mt-0.5 shrink-0" />
-            <span>
-              Razorpay sandbox gateway checkout. Test cards and mock UPI can be used safely.
-              Upon successful payment, an HMAC-SHA256 signature is verified and logged to your
-              Spendly ledger.
-            </span>
+          {/* Gateway security info banner with Vector Shield Art */}
+          <div className="flex items-center gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-3.5 text-xs text-indigo-800 dark:text-indigo-300">
+            <SecurityShieldArt size={32} />
+            <div className="text-[11px] leading-relaxed">
+              <strong className="font-bold">Razorpay Test Gateway:</strong> Enter the recipient UPI ID. Successful payments are cryptographically verified via HMAC-SHA256 and recorded into your Spendly ledger.
+            </div>
           </div>
 
           {/* Form Actions */}
-          <div className="flex gap-2.5 pt-1">
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onCancel}
               disabled={isLoading}
-              className="flex-1 py-3 rounded-xl bg-card border border-card-border text-xs font-semibold text-muted hover:bg-muted-bg cursor-pointer transition-colors disabled:opacity-50"
+              className="flex-1 py-3.5 rounded-2xl bg-card border border-card-border text-xs font-bold text-muted hover:bg-muted-bg cursor-pointer transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:opacity-95 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isLoading ? (
                 <>
-                  <Icon name="refresh-cw" size={14} className="animate-spin" />
-                  <span>Connecting Gateway…</span>
+                  <Icon name="refresh-cw" size={16} className="animate-spin" />
+                  <span>Opening Gateway…</span>
                 </>
               ) : (
                 <>
-                  <Icon name="credit-card" size={14} />
+                  <Icon name="credit-card" size={16} />
                   <span>Pay with Razorpay</span>
                 </>
               )}
@@ -1595,6 +1408,7 @@ function RazorpaySuccessScreen({
   onDone,
   onViewHistory,
 }: RazorpaySuccessScreenProps) {
+  const [copied, setCopied] = useState(false);
   const ts = new Date(transfer.timestamp);
   const dateStr = ts.toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -1606,88 +1420,341 @@ function RazorpaySuccessScreen({
     minute: "2-digit",
   });
 
+  const handleCopyPaymentId = () => {
+    const pId = transfer.paymentId || transfer.transactionId;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(pId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const rows = [
-    { label: "Payee / Recipient", value: transfer.recipientName, green: false, mono: false },
-    ...(transfer.upiId && transfer.upiId !== "Razorpay Gateway"
-      ? [{ label: "UPI / Ref", value: transfer.upiId, green: false, mono: true }]
+    { label: "Recipient UPI ID", value: transfer.upiId, green: false, mono: true },
+    ...(transfer.recipientName?.trim() && transfer.recipientName !== transfer.upiId
+      ? [{ label: "Payee Name", value: transfer.recipientName, green: false, mono: false }]
       : []),
     {
       label: "Payment ID",
       value: transfer.paymentId || transfer.transactionId,
       green: false,
       mono: true,
+      canCopy: true,
     },
     ...(transfer.orderId
       ? [{ label: "Order ID", value: transfer.orderId, green: false, mono: true }]
       : []),
     { label: "Date & Time", value: `${dateStr}, ${timeStr}`, green: false, mono: false },
     { label: "Category", value: transfer.category, green: false, mono: false },
-    { label: "Status", value: "Verified & Settled", green: true, mono: false },
+    { label: "Payment Status", value: "Verified & Settled", green: true, mono: false },
     {
-      label: "Security Verification",
-      value: "HMAC-SHA256 Validated",
+      label: "Ledger State",
+      value: "Logged in PostgreSQL",
       green: true,
       mono: false,
     },
   ];
 
   return (
-    <div className="space-y-4 text-center">
-      <div className="flex flex-col items-center py-6 space-y-3">
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 ring-4 ring-emerald-500/20">
-          <Icon name="check-circle" size={42} />
-        </div>
+    <div className="space-y-5 text-center">
+      {/* Celebratory Vector Art */}
+      <div className="flex flex-col items-center py-4 space-y-2">
+        <TransferSuccessArt size={140} />
         <div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mb-2">
-            <Icon name="shield" size={11} />
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-2">
+            <Icon name="shield" size={12} />
             RAZORPAY VERIFIED
           </span>
-          <h2 className="text-xl font-extrabold text-foreground">Transfer Successful</h2>
+          <h2 className="text-2xl font-black text-foreground">Transfer Successful</h2>
         </div>
         <p className="text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
           {formatINR(transfer.amount)}
         </p>
       </div>
 
-      <Card className="text-left divide-y divide-card-border overflow-hidden">
+      <Card className="text-left divide-y divide-card-border overflow-hidden rounded-3xl">
         {rows.map((row) => (
-          <div key={row.label} className="flex items-center justify-between px-4 py-3.5">
-            <span className="text-xs text-muted">{row.label}</span>
-            <span
-              className={`text-sm font-semibold ${
-                row.green ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
-              } ${row.mono ? "font-mono text-xs" : ""}`}
-            >
-              {row.value}
-            </span>
+          <div key={row.label} className="flex items-center justify-between px-5 py-3.5">
+            <span className="text-xs text-muted font-medium">{row.label}</span>
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-sm font-semibold ${
+                  row.green ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                } ${row.mono ? "font-mono text-xs" : ""}`}
+              >
+                {row.value}
+              </span>
+              {"canCopy" in row && row.canCopy && (
+                <button
+                  type="button"
+                  onClick={handleCopyPaymentId}
+                  className="p-1 rounded-md text-muted hover:text-foreground hover:bg-muted-bg transition-colors cursor-pointer"
+                  title="Copy Payment ID"
+                >
+                  <Icon name={copied ? "check" : "copy"} size={13} className={copied ? "text-emerald-500" : ""} />
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </Card>
 
-      <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-[11px] text-emerald-700 dark:text-emerald-400 text-left">
-        <Icon name="check" size={13} className="mt-0.5 shrink-0" />
+      <div className="flex items-start gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-[11px] text-emerald-700 dark:text-emerald-400 text-left">
+        <Icon name="check-circle" size={15} className="mt-0.5 shrink-0" />
         <span>
-          Payment verified by Razorpay and recorded in your Spendly financial ledger.
-          Budget limits and overspend checks have been automatically processed.
+          Payment verified by Razorpay and logged into your Spendly ledger.
+          Your daily safe-to-spend balance and overspend checks have been automatically recalculated.
         </span>
       </div>
 
-      <div className="flex gap-2.5">
+      <div className="flex gap-3">
         <button
           type="button"
           onClick={onViewHistory}
-          className="flex-1 py-3 rounded-xl bg-card border border-card-border text-xs font-semibold text-muted hover:bg-muted-bg cursor-pointer transition-colors"
+          className="flex-1 py-3.5 rounded-2xl bg-card border border-card-border text-xs font-bold text-muted hover:bg-muted-bg cursor-pointer transition-colors"
         >
           View in History
         </button>
         <button
           type="button"
           onClick={onDone}
-          className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 cursor-pointer transition-opacity shadow-sm"
+          className="flex-1 py-3.5 rounded-2xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 cursor-pointer transition-opacity shadow-sm"
         >
           Done
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Demo Transfer Form
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface TransferFormProps {
+  initial?: Partial<TransferFormData>;
+  onReview: (data: TransferFormData) => void;
+  onCancel: () => void;
+}
+
+function TransferForm({ initial, onReview, onCancel }: TransferFormProps) {
+  const [form, setForm] = useState<TransferFormData>({
+    recipientName: initial?.recipientName ?? "",
+    upiId: initial?.upiId ?? "",
+    amount: initial?.amount ?? "",
+    note: initial?.note ?? "",
+    category: initial?.category ?? "Others",
+  });
+  const [errors, setErrors] = useState<Partial<Record<keyof TransferFormData, string>>>({});
+  const amountInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (initial?.upiId && !initial?.amount) {
+      const timer = setTimeout(() => amountInputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [initial]);
+
+  const validate = (): boolean => {
+    const e: typeof errors = {};
+    if (!form.upiId.trim()) {
+      e.upiId = "Please enter a UPI ID.";
+    } else if (!validateUpiId(form.upiId)) {
+      e.upiId = "Enter a valid UPI ID (e.g. name@upi)";
+    }
+    const numAmount = parseFloat(form.amount);
+    if (!form.amount.trim()) {
+      e.amount = "Please enter an amount.";
+    } else if (isNaN(numAmount) || numAmount <= 0) {
+      e.amount = "Enter an amount greater than ₹0.";
+    } else if (numAmount > 100000) {
+      e.amount = "Maximum transfer amount is ₹1,00,000.";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (validate()) onReview(form);
+  };
+
+  const setField = (field: keyof TransferFormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const quickAmounts = [100, 500, 1000, 2000, 5000];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-2 px-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Back"
+          className="flex h-9 w-9 items-center justify-center rounded-2xl hover:bg-muted-bg text-muted cursor-pointer transition-colors"
+        >
+          <Icon name="arrow-right" size={18} className="rotate-180" />
+        </button>
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Send Money (Demo)</h2>
+          <p className="text-xs text-muted">Simulate a transfer without real money</p>
+        </div>
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+          <Icon name="shield" size={11} />
+          DEMO MODE
+        </span>
+      </div>
+
+      <DisclaimerBanner />
+
+      <Card className="p-5 sm:p-6 space-y-5 rounded-3xl">
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          {/* UPI ID */}
+          <div>
+            <label htmlFor="tf-upi" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+              UPI ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="tf-upi"
+              type="text"
+              value={form.upiId}
+              onChange={setField("upiId")}
+              placeholder="e.g. rahul@demo"
+              autoComplete="off"
+              className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50 font-mono"
+              aria-describedby={errors.upiId ? "tf-upi-err" : undefined}
+            />
+            {errors.upiId && (
+              <p id="tf-upi-err" role="alert" className="text-[11px] text-red-500 mt-1">
+                {errors.upiId}
+              </p>
+            )}
+          </div>
+
+          {/* Recipient Name */}
+          <div>
+            <label htmlFor="tf-name" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+              Recipient Name <span className="text-[10px] font-normal text-muted normal-case tracking-normal">(optional)</span>
+            </label>
+            <input
+              id="tf-name"
+              type="text"
+              value={form.recipientName}
+              onChange={setField("recipientName")}
+              placeholder="e.g. Rahul Sharma"
+              autoComplete="off"
+              className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50"
+            />
+          </div>
+
+          {/* Amount */}
+          <div>
+            <label htmlFor="tf-amount" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+              Amount (₹) <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-muted select-none">
+                ₹
+              </span>
+              <input
+                id="tf-amount"
+                ref={amountInputRef}
+                type="number"
+                inputMode="decimal"
+                min="1"
+                max="100000"
+                step="any"
+                value={form.amount}
+                onChange={setField("amount")}
+                placeholder="0.00"
+                className="w-full pl-9 pr-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-lg font-mono font-bold text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/40"
+                aria-describedby={errors.amount ? "tf-amount-err" : undefined}
+              />
+            </div>
+            {errors.amount && (
+              <p id="tf-amount-err" role="alert" className="text-[11px] text-red-500 mt-1">
+                {errors.amount}
+              </p>
+            )}
+
+            {/* Quick amount chips */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              {quickAmounts.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({ ...prev, amount: String(q) }));
+                    setErrors((prev) => ({ ...prev, amount: undefined }));
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-muted-bg border border-card-border text-xs font-semibold text-muted hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer"
+                >
+                  +₹{q.toLocaleString("en-IN")}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category Selection */}
+          <div>
+            <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+              Category
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, category: c.id }))}
+                  className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
+                    form.category === c.id
+                      ? "border-primary bg-primary-soft text-primary shadow-sm ring-1 ring-primary/30"
+                      : "border-card-border bg-muted-bg text-muted hover:text-foreground hover:border-card-border/80"
+                  }`}
+                >
+                  <span>{c.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Note / Remarks */}
+          <div>
+            <label htmlFor="tf-note" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+              Note <span className="text-[10px] font-normal text-muted normal-case tracking-normal">(optional)</span>
+            </label>
+            <input
+              id="tf-note"
+              type="text"
+              value={form.note}
+              onChange={setField("note")}
+              placeholder="e.g. Dinner, rent, split bill"
+              maxLength={80}
+              className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50"
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 py-3.5 rounded-2xl bg-muted-bg border border-card-border text-xs font-bold text-muted hover:bg-card hover:text-foreground cursor-pointer transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-3.5 rounded-2xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 cursor-pointer transition-opacity shadow-sm flex items-center justify-center gap-2"
+            >
+              <span>Review Transfer</span>
+              <Icon name="arrow-right" size={15} />
+            </button>
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }
@@ -1705,7 +1772,6 @@ interface ReviewScreenProps {
 function ReviewScreen({ data, onConfirm, onCancel }: ReviewScreenProps) {
   const amount = parseFloat(data.amount);
   const rows = [
-    // Only show Recipient row when a name was provided
     ...(data.recipientName.trim() ? [{ label: "Recipient", value: data.recipientName, mono: false }] : []),
     { label: "UPI ID", value: data.upiId, mono: true },
     { label: "Category", value: data.category, mono: false },
@@ -1713,10 +1779,15 @@ function ReviewScreen({ data, onConfirm, onCancel }: ReviewScreenProps) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center gap-2 px-1">
-        <button type="button" onClick={onCancel} aria-label="Back" className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted-bg text-muted cursor-pointer">
-          <Icon name="arrow-right" size={16} className="rotate-180" />
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Back"
+          className="flex h-9 w-9 items-center justify-center rounded-2xl hover:bg-muted-bg text-muted cursor-pointer"
+        >
+          <Icon name="arrow-right" size={18} className="rotate-180" />
         </button>
         <div>
           <h2 className="text-lg font-bold text-foreground">Review Transfer</h2>
@@ -1726,7 +1797,7 @@ function ReviewScreen({ data, onConfirm, onCancel }: ReviewScreenProps) {
 
       <DisclaimerBanner />
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden rounded-3xl">
         <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground px-5 py-6 text-center">
           <p className="text-xs font-semibold uppercase tracking-wider opacity-80 mb-1">You&apos;re sending</p>
           <p className="text-4xl font-extrabold font-mono">{formatINR(amount)}</p>
@@ -1735,18 +1806,28 @@ function ReviewScreen({ data, onConfirm, onCancel }: ReviewScreenProps) {
         <div className="divide-y divide-card-border">
           {rows.map((row) => (
             <div key={row.label} className="flex items-center justify-between px-5 py-3.5">
-              <span className="text-xs text-muted">{row.label}</span>
-              <span className={`text-sm font-semibold text-foreground ${row.mono ? "font-mono" : ""}`}>{row.value}</span>
+              <span className="text-xs text-muted font-medium">{row.label}</span>
+              <span className={`text-sm font-semibold text-foreground ${row.mono ? "font-mono" : ""}`}>
+                {row.value}
+              </span>
             </div>
           ))}
         </div>
       </Card>
 
-      <div className="flex gap-2.5">
-        <button type="button" onClick={onCancel} className="flex-1 py-3 rounded-xl bg-card border border-card-border text-xs font-semibold text-muted hover:bg-muted-bg cursor-pointer transition-colors">
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 py-3.5 rounded-2xl bg-card border border-card-border text-xs font-bold text-muted hover:bg-muted-bg cursor-pointer transition-colors"
+        >
           Cancel
         </button>
-        <button type="button" onClick={onConfirm} className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-sm">
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="flex-1 py-3.5 rounded-2xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
+        >
           Confirm Transfer
         </button>
       </div>
@@ -1761,20 +1842,20 @@ function ReviewScreen({ data, onConfirm, onCancel }: ReviewScreenProps) {
 function ProcessingScreen() {
   return (
     <div className="flex flex-col items-center justify-center py-24 space-y-5">
-      <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary-soft">
-        <Icon name="send" size={32} className="text-primary animate-pulse" />
-        <span className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" aria-hidden="true" />
+      <div className="relative flex h-24 w-24 items-center justify-center rounded-3xl bg-primary-soft">
+        <Icon name="send" size={36} className="text-primary animate-pulse" />
+        <span className="absolute inset-0 rounded-3xl border-2 border-primary/30 animate-ping" aria-hidden="true" />
       </div>
       <div className="text-center space-y-1">
         <p className="text-base font-bold text-foreground">Processing transfer…</p>
-        <p className="text-xs text-muted">Simulating demo transaction</p>
+        <p className="text-xs text-muted">Simulating demo transaction ledger</p>
       </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Success Screen
+// Success Screen (Demo)
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface SuccessScreenProps {
@@ -1789,7 +1870,7 @@ function SuccessScreen({ transfer, onDone, onViewHistory }: SuccessScreenProps) 
   const timeStr = ts.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
   const rows = [
-    { label: "Sent to", value: transfer.recipientName, green: false, mono: false },
+    { label: "Sent to", value: transfer.recipientName || "Recipient", green: false, mono: false },
     { label: "UPI ID", value: transfer.upiId, green: false, mono: true },
     { label: "Transaction ID", value: transfer.transactionId, green: false, mono: true },
     { label: "Date & Time", value: `${dateStr}, ${timeStr}`, green: false, mono: false },
@@ -1798,22 +1879,30 @@ function SuccessScreen({ transfer, onDone, onViewHistory }: SuccessScreenProps) 
   ];
 
   return (
-    <div className="space-y-4 text-center">
-      <div className="flex flex-col items-center py-6 space-y-3">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 ring-4 ring-emerald-500/20">
-          <Icon name="check-circle" size={40} />
+    <div className="space-y-5 text-center">
+      <div className="flex flex-col items-center py-4 space-y-2">
+        <TransferSuccessArt size={140} />
+        <div>
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-xs font-bold text-amber-600 dark:text-amber-400 mb-2">
+            <Icon name="shield" size={12} />
+            DEMO SIMULATION
+          </span>
+          <h2 className="text-2xl font-black text-foreground">Transfer Successful</h2>
         </div>
-        <h2 className="text-xl font-extrabold text-foreground">Transfer Successful</h2>
         <p className="text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
           {formatINR(transfer.amount)}
         </p>
       </div>
 
-      <Card className="text-left divide-y divide-card-border">
+      <Card className="text-left divide-y divide-card-border overflow-hidden rounded-3xl">
         {rows.map((row) => (
-          <div key={row.label} className="flex items-center justify-between px-4 py-3.5">
-            <span className="text-xs text-muted">{row.label}</span>
-            <span className={`text-sm font-semibold ${row.green ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"} ${row.mono ? "font-mono text-xs" : ""}`}>
+          <div key={row.label} className="flex items-center justify-between px-5 py-3.5">
+            <span className="text-xs text-muted font-medium">{row.label}</span>
+            <span
+              className={`text-sm font-semibold ${
+                row.green ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+              } ${row.mono ? "font-mono text-xs" : ""}`}
+            >
               {row.value}
             </span>
           </div>
@@ -1822,11 +1911,19 @@ function SuccessScreen({ transfer, onDone, onViewHistory }: SuccessScreenProps) 
 
       <DisclaimerBanner text="Demo transaction — no real money was transferred." />
 
-      <div className="flex gap-2.5">
-        <button type="button" onClick={onViewHistory} className="flex-1 py-3 rounded-xl bg-card border border-card-border text-xs font-semibold text-muted hover:bg-muted-bg cursor-pointer transition-colors">
-          View Transaction
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onViewHistory}
+          className="flex-1 py-3.5 rounded-2xl bg-card border border-card-border text-xs font-bold text-muted hover:bg-muted-bg cursor-pointer transition-colors"
+        >
+          View in History
         </button>
-        <button type="button" onClick={onDone} className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 cursor-pointer transition-opacity shadow-sm">
+        <button
+          type="button"
+          onClick={onDone}
+          className="flex-1 py-3.5 rounded-2xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 cursor-pointer transition-opacity shadow-sm"
+        >
           Done
         </button>
       </div>
@@ -1838,54 +1935,81 @@ function SuccessScreen({ transfer, onDone, onViewHistory }: SuccessScreenProps) 
 // Recent Transfers List
 // ─────────────────────────────────────────────────────────────────────────────
 
-function RecentTransfers({ transfers }: { transfers: CompletedTransfer[] }) {
-  // Memoise the "now" timestamp so it doesn't change between renders
-  const now = useMemo(() => new Date().getTime(), []);
+function RecentTransfers({ transfers, mounted }: { transfers: CompletedTransfer[]; mounted?: boolean }) {
+  const [now, setNow] = useState<number>(0);
 
-  if (transfers.length === 0) return null;
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
+
+  if (!mounted || transfers.length === 0) {
+    return (
+      <section className="recent-transfers-section pt-2">
+        <div className="flex items-center justify-between px-1 mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Recent Transfers
+          </h2>
+        </div>
+        <Card className="p-8 text-center flex flex-col items-center justify-center space-y-3 rounded-3xl">
+          <EmptyTransfersArt size={120} />
+          <div>
+            <p className="text-sm font-bold text-foreground">No Transfers Yet</p>
+            <p className="text-xs text-muted max-w-xs mx-auto mt-1 leading-relaxed">
+              Send money instantly via Razorpay or direct mobile UPI to see your transfers recorded here.
+            </p>
+          </div>
+        </Card>
+      </section>
+    );
+  }
 
   return (
-    <section className="recent-transfers-section">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted px-1 mb-3">
-        Recent Transfers
-      </h2>
-      <div className="divide-y divide-card-border overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
+    <section className="recent-transfers-section pt-2">
+      <div className="flex items-center justify-between px-1 mb-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">
+          Recent Transfers
+        </h2>
+        <span className="text-[11px] text-muted font-medium">
+          {transfers.length} {transfers.length === 1 ? "record" : "records"}
+        </span>
+      </div>
+      <div className="divide-y divide-card-border overflow-hidden rounded-3xl border border-card-border bg-card shadow-card">
         {transfers.slice(0, 10).map((t) => (
-          <div key={t.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted-bg transition-colors">
+          <div key={t.id} className="flex items-center gap-3 px-4 py-3.5 hover:bg-muted-bg transition-colors">
             <span
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
                 t.isVerified || t.paymentId
                   ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
                   : CATEGORY_COLOR[t.category] ?? "bg-slate-500/10 text-slate-500"
               }`}
             >
               {t.isVerified || t.paymentId ? (
-                <Icon name="credit-card" size={17} />
+                <Icon name="credit-card" size={20} />
               ) : (
-                <Icon name="send" size={17} />
+                <Icon name="send" size={20} />
               )}
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <p className="text-sm font-semibold text-foreground truncate">{t.recipientName}</p>
+                <p className="text-sm font-bold text-foreground truncate">{t.recipientName}</p>
                 {t.isVerified || t.paymentId ? (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
                     <Icon name="check" size={9} />
                     VERIFIED
                   </span>
                 ) : (
-                  <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                  <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
                     DEMO
                   </span>
                 )}
               </div>
-              <p className="text-xs text-muted truncate font-mono">
+              <p className="text-xs text-muted truncate font-mono mt-0.5">
                 {t.paymentId ? `Razorpay: ${t.paymentId}` : t.upiId}
               </p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-sm font-semibold text-foreground">{formatINR(t.amount)}</p>
-              <p className="text-xs text-muted">{relativeTransferDate(t.timestamp, now)}</p>
+              <p className="text-sm font-bold text-foreground">{formatINR(t.amount)}</p>
+              <p className="text-[11px] text-muted mt-0.5">{now ? relativeTransferDate(t.timestamp, now) : ""}</p>
             </div>
           </div>
         ))}
@@ -1917,10 +2041,15 @@ export default function TransferPage() {
   const [step, setStep] = useState<TransferStep>("home");
   const [formData, setFormData] = useState<TransferFormData | null>(null);
   const [completedTransfer, setCompletedTransfer] = useState<CompletedTransfer | null>(null);
-  // Lazy initialiser reads localStorage only once, on mount — no effect needed
-  const [transfers, setTransfers] = useState<CompletedTransfer[]>(loadTransfers);
+  const [transfers, setTransfers] = useState<CompletedTransfer[]>([]);
+  const [mounted, setMounted] = useState(false);
   const [showQRGen, setShowQRGen] = useState(false);
   const submittingRef = useRef(false);
+
+  useEffect(() => {
+    setTransfers(loadTransfers());
+    setMounted(true);
+  }, []);
 
   // ── UPI pay flow state ──
   const [upiPayData, setUpiPayData] = useState<UpiPayFormData | null>(null);
@@ -1963,14 +2092,16 @@ export default function TransferPage() {
       setRazorpayError(null);
 
       try {
+        const effectiveName = data.recipientName.trim() || data.upiId.trim();
+
         // 1. Create order on server
         const orderRes = await fetch("/api/razorpay/create-order", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: parseFloat(data.amount),
-            recipientName: data.recipientName,
-            upiId: data.upiId,
+            recipientName: effectiveName,
+            upiId: data.upiId.trim(),
             category: data.category,
             note: data.note,
           }),
@@ -1994,9 +2125,7 @@ export default function TransferPage() {
           amount: orderData.amount, // in paise
           currency: orderData.currency || "INR",
           name: "Spendly Transfer",
-          description: data.recipientName
-            ? `Transfer to ${data.recipientName}`
-            : "Transfer via Spendly",
+          description: `Transfer to ${effectiveName}`,
           order_id: orderData.orderId,
           handler: async function (response: {
             razorpay_payment_id: string;
@@ -2016,8 +2145,8 @@ export default function TransferPage() {
                   transferDetails: {
                     amount: parseFloat(data.amount),
                     category: data.category,
-                    recipientName: data.recipientName,
-                    upiId: data.upiId,
+                    recipientName: effectiveName,
+                    upiId: data.upiId.trim(),
                     note: data.note,
                   },
                 }),
@@ -2030,8 +2159,8 @@ export default function TransferPage() {
 
               const completed: CompletedTransfer = {
                 id: verifyData.transactionId || crypto.randomUUID(),
-                recipientName: data.recipientName,
-                upiId: data.upiId || "Razorpay Gateway",
+                recipientName: effectiveName,
+                upiId: data.upiId.trim(),
                 amount: parseFloat(data.amount),
                 category: data.category,
                 note: data.note,
@@ -2277,7 +2406,7 @@ export default function TransferPage() {
 
           {/* Recent transfers */}
           <div className="dashboard-enter" style={{ animationDelay: "440ms" }}>
-            <RecentTransfers transfers={transfers} />
+            <RecentTransfers transfers={transfers} mounted={mounted} />
           </div>
         </div>
       )}

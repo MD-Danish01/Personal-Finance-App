@@ -1,7 +1,23 @@
 "use client";
 
-import { useTheme, type ThemeColor, type ThemeMode } from "@/components/providers/ThemeProvider";
+import {
+  useTheme,
+  type ThemeColor,
+  type ThemeMode,
+  type IconSizeScale,
+} from "@/components/providers/ThemeProvider";
 import { Icon } from "@/components/ui/Icon";
+
+const ICON_SIZE_OPTIONS: {
+  id: IconSizeScale;
+  label: string;
+  sublabel: string;
+  iconName: "sparkles" | "target" | "palette";
+}[] = [
+  { id: "small", label: "Compact", sublabel: "85% scale", iconName: "sparkles" },
+  { id: "medium", label: "Standard", sublabel: "100% (Default)", iconName: "target" },
+  { id: "large", label: "Cozy", sublabel: "120% scale", iconName: "palette" },
+];
 
 const COLOR_OPTIONS: { id: ThemeColor; name: string; bgClass: string; borderClass: string }[] = [
   {
@@ -49,10 +65,18 @@ const MODE_OPTIONS: { id: ThemeMode; label: string; icon: "sun" | "moon" | "sett
 ];
 
 export function ThemeSelectorCard() {
-  const { themeColor, themeMode, setThemeColor, setThemeMode, isSaving } = useTheme();
+  const {
+    themeColor,
+    themeMode,
+    iconSize,
+    setThemeColor,
+    setThemeMode,
+    setIconSize,
+    isSaving,
+  } = useTheme();
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Theme Mode Segmented Control */}
       <div>
         <div className="flex items-center justify-between mb-2.5">
@@ -82,6 +106,58 @@ export function ThemeSelectorCard() {
               >
                 <Icon name={mode.icon} size={15} />
                 <span>{mode.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Icon & Visual Size Segmented Control */}
+      <div>
+        <div className="flex items-center justify-between mb-2.5">
+          <label className="text-xs font-semibold text-muted uppercase tracking-wider">
+            Icon &amp; Visual Sizing
+          </label>
+          <span className="text-[11px] text-muted">
+            {iconSize === "small"
+              ? "Compact"
+              : iconSize === "large"
+              ? "Cozy (Enlarged)"
+              : "Standard"}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {ICON_SIZE_OPTIONS.map((opt) => {
+            const isActive = iconSize === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setIconSize(opt.id)}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? "bg-primary-soft/50 border-primary ring-1 ring-primary text-foreground shadow-xs"
+                    : "bg-muted-bg/60 border-card-border hover:bg-muted-bg text-muted"
+                }`}
+              >
+                <span
+                  className={`flex items-center justify-center rounded-lg transition-transform ${
+                    isActive ? "text-primary" : "text-muted"
+                  }`}
+                >
+                  <Icon
+                    name={opt.iconName}
+                    size={opt.id === "small" ? 15 : opt.id === "large" ? 22 : 18}
+                  />
+                </span>
+                <span
+                  className={`text-xs font-bold ${
+                    isActive ? "text-foreground" : "text-foreground/80"
+                  }`}
+                >
+                  {opt.label}
+                </span>
+                <span className="text-[10px] text-muted leading-tight">{opt.sublabel}</span>
               </button>
             );
           })}

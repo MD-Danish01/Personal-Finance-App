@@ -1,4 +1,7 @@
+"use client";
+
 import type { LucideIcon } from "lucide-react";
+import { useTheme } from "@/components/providers/ThemeProvider";
 import {
   AlertTriangle,
   ArrowDown,
@@ -184,6 +187,15 @@ const ICONS: Record<IconName, LucideIcon> = {
 };
 
 export function Icon({ name, size = 20, className, strokeWidth = 1.8 }: IconProps) {
+  let scale = 1.0;
+  try {
+    const theme = useTheme();
+    scale = theme.iconScale ?? 1.0;
+  } catch {
+    scale = 1.0;
+  }
+
+  const finalSize = Math.round(size * scale);
   const Component = ICONS[name] ?? Sparkles;
-  return <Component size={size} className={className} strokeWidth={strokeWidth} aria-hidden="true" />;
+  return <Component size={finalSize} className={className} strokeWidth={strokeWidth} aria-hidden="true" />;
 }

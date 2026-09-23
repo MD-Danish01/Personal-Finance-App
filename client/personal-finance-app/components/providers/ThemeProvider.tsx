@@ -19,12 +19,17 @@ export type ThemeColor =
 
 export type ThemeMode = "light" | "dark" | "system";
 
+export type IconSizeScale = "small" | "medium" | "large";
+
 export interface ThemeContextValue {
   themeColor: ThemeColor;
   themeMode: ThemeMode;
+  iconSize: IconSizeScale;
+  iconScale: number;
   resolvedMode: "light" | "dark";
   setThemeColor: (color: ThemeColor) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setIconSize: (size: IconSizeScale) => void;
   isSaving: boolean;
 }
 
@@ -32,6 +37,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const STORAGE_COLOR_KEY = "pfa_theme_color";
 const STORAGE_MODE_KEY = "pfa_theme_mode";
+const STORAGE_ICON_SIZE_KEY = "pfa_icon_size";
 
 function getInitialColor(): ThemeColor {
   if (typeof window === "undefined") return "emerald";
@@ -43,10 +49,24 @@ function getInitialMode(): ThemeMode {
   return (localStorage.getItem(STORAGE_MODE_KEY) as ThemeMode) || "system";
 }
 
+function getInitialIconSize(): IconSizeScale {
+  if (typeof window === "undefined") return "medium";
+  return (localStorage.getItem(STORAGE_ICON_SIZE_KEY) as IconSizeScale) || "medium";
+}
+
+const SCALE_MAP: Record<IconSizeScale, number> = {
+  small: 0.85,
+  medium: 1.0,
+  large: 1.2,
+};
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeColor, setThemeColorState] = useState<ThemeColor>(getInitialColor);
   const [themeMode, setThemeModeState] = useState<ThemeMode>(getInitialMode);
+  const [iconSize, setIconSizeState] = useState<IconSizeScale>(getInitialIconSize);
   const [isSaving, setIsSaving] = useState(false);
+
+  const iconScale = SCALE_MAP[iconSize] ?? 1.0;
 
   const resolvedMode: "light" | "dark" =
     themeMode === "dark"
@@ -58,11 +78,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       : "light";
 
   // Apply theme attributes to DOM
-  const applyDomTheme = useCallback((color: ThemeColor, mode: ThemeMode) => {
+  const applyDomTheme = useCallback((color: ThemeColor, mode: ThemeMode, iSize: IconSizeScale) => {
     if (typeof document === "undefined") return;
 
     const root = document.documentElement;
     root.setAttribute("data-theme-color", color);
+    root.setAttribute("data-icon-size", iSize);
 
     let effectiveMode: "light" | "dark" = "light";
     if (mode === "dark") {
@@ -89,7 +110,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     let ignore = false;
 
     // Apply active theme to DOM immediately without calling setState
-    applyDomTheme(themeColor, themeMode);
+    applyDomTheme(themeColor, themeMode, iconSize);
 
     // Sync from database if user is logged in
     async function syncTheme() {
@@ -105,7 +126,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             setThemeModeState(remoteMode);
             localStorage.setItem(STORAGE_COLOR_KEY, remoteColor);
             localStorage.setItem(STORAGE_MODE_KEY, remoteMode);
-            applyDomTheme(remoteColor, remoteMode);
+            applyDomTheme(remoteColor, remoteMode, iconSize);
           }
         }
       } catch {
@@ -122,6 +143,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         applyDomTheme(
           (localStorage.getItem(STORAGE_COLOR_KEY) as ThemeColor) || "emerald",
           "system",
+          (localStorage.getItem(STORAGE_ICON_SIZE_KEY) as IconSizeScale) || "medium",
         );
       }
     };
@@ -131,7 +153,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       ignore = true;
       mediaQuery.removeEventListener("change", handleChange);
     };
-  }, [applyDomTheme, themeColor, themeMode]);
+  }, [applyDomTheme, themeColor, themeMode, iconSize]);
 
   // Persist theme changes
   const saveToBackend = useCallback(async (color: ThemeColor, mode: ThemeMode) => {
@@ -155,10 +177,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (typeof window !== "undefined") {
         localStorage.setItem(STORAGE_COLOR_KEY, color);
       }
-      applyDomTheme(color, themeMode);
+      applyDomTheme(color, themeMode, iconSize);
       saveToBackend(color, themeMode);
     },
-    [themeMode, applyDomTheme, saveToBackend],
+    [themeMode, iconSize, applyDomTheme, saveToBackend],
   );
 
   const setThemeMode = useCallback(
@@ -167,10 +189,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (typeof window !== "undefined") {
         localStorage.setItem(STORAGE_MODE_KEY, mode);
       }
-      applyDomTheme(themeColor, mode);
+      applyDomTheme(themeColor, mode, iconSize);
       saveToBackend(themeColor, mode);
     },
-    [themeColor, applyDomTheme, saveToBackend],
+    [themeColor, iconSize, applyDomTheme, saveToBackend],
+  );
+
+  const setIconSize = useCallback(
+    (size: IconSizeScale) => {
+      setIconSizeState(size);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_ICON_SIZE_KEY, size);
+      }
+      applyDomTheme(themeColor, themeMode, size);
+    },
+    [themeColor, themeMode, applyDomTheme],
   );
 
   return (
@@ -178,9 +211,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       value={{
         themeColor,
         themeMode,
+        iconSize,
+        iconScale,
         resolvedMode,
         setThemeColor,
         setThemeMode,
+        setIconSize,
         isSaving,
       }}
     >

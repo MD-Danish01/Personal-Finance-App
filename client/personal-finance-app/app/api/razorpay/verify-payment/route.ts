@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { getAuthenticatedUser, unauthorizedResponse } from "@/lib/auth-helpers";
-import { verifyRazorpaySignature } from "@/lib/razorpay";
+import { getRazorpayOrder, verifyRazorpaySignature } from "@/lib/razorpay";
 import { checkAndSendOverspendAlert } from "@/app/api/transactions/route";
 
 const VALID_CATEGORIES = [
@@ -61,6 +61,14 @@ export async function POST(req: NextRequest) {
     if (isNaN(parsedAmountPaise) || parsedAmountPaise <= 0) {
       return NextResponse.json(
         { error: "Invalid payment amount." },
+        { status: 400 },
+      );
+    }
+
+    const razorpayOrder = await getRazorpayOrder(razorpay_order_id);
+    if (razorpayOrder.amount !== parsedAmountPaise) {
+      return NextResponse.json(
+        { error: "Payment amount does not match the Razorpay order." },
         { status: 400 },
       );
     }

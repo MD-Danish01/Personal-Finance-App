@@ -145,6 +145,89 @@ export interface OverspendingAlertEmailParams {
   baseUrl?: string;
 }
 
+export interface MonthlyReportEmailParams {
+  to: string;
+  name: string;
+  monthLabel: string;
+  budget: number;
+  spent: number;
+  remaining: number;
+  categoryBreakdown: Array<{ category: string; amount: number }>;
+  dashboardUrl?: string;
+}
+
+export async function sendMonthlyReportEmail({
+  to,
+  name,
+  monthLabel,
+  budget,
+  spent,
+  remaining,
+  categoryBreakdown,
+  dashboardUrl,
+}: MonthlyReportEmailParams): Promise<{ success: boolean; error?: string }> {
+  const origin =
+    process.env.EMAIL_APP_URL ||
+    (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")
+      ? process.env.NEXT_PUBLIC_APP_URL
+      : "https://devforge.danishdev.me");
+  const reportUrl = dashboardUrl ?? `${origin.replace(/\/$/, "")}/home`;
+  const rows = categoryBreakdown
+    .map(
+      ({ category, amount }) =>
+        `<tr><td style="padding:6px 0;color:#94a3b8;font-size:13px;">${category}</td><td style="padding:6px 0;text-align:right;color:#f3f4f6;font-size:13px;font-weight:700;font-family:monospace;">₹${amount.toLocaleString("en-IN")}</td></tr>`,
+    )
+    .join("");
+  const textBreakdown = categoryBreakdown
+    .map(({ category, amount }) => `• ${category}: ₹${amount.toLocaleString("en-IN")}`)
+    .join("\n");
+
+  const html = `
+<html><body style="font-family:Arial,sans-serif;background:#0c0e12;color:#f3f4f6;padding:40px 20px;">
+  <div style="max-width:540px;margin:0 auto;background:#161a22;border:1px solid #232836;border-radius:24px;padding:36px 32px;">
+    <div style="color:#10b981;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Spendly Personal Finance</div>
+    <h1 style="font-size:22px;color:#fff;margin:22px 0 12px;">Your monthly report</h1>
+    <p style="font-size:14px;line-height:22px;color:#94a3b8;">Hi ${name || "there"}, here is your spending summary for <strong>${monthLabel}</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:24px 0;background:#0c0e12;border:1px solid #232836;border-radius:16px;padding:12px;">
+      <tr><td style="padding:8px 0;color:#94a3b8;">Monthly budget</td><td style="padding:8px 0;text-align:right;font-weight:700;">₹${budget.toLocaleString("en-IN")}</td></tr>
+      <tr><td style="padding:8px 0;color:#94a3b8;">Total spent</td><td style="padding:8px 0;text-align:right;font-weight:700;">₹${spent.toLocaleString("en-IN")}</td></tr>
+      <tr><td style="padding:8px 0;color:#10b981;">Remaining</td><td style="padding:8px 0;text-align:right;color:#10b981;font-weight:800;">₹${remaining.toLocaleString("en-IN")}</td></tr>
+    </table>
+    <h2 style="font-size:14px;color:#fff;margin:24px 0 8px;">Spending by category</h2>
+    <table style="width:100%;border-collapse:collapse;">${rows || `<tr><td style="padding:6px 0;color:#94a3b8;">No expenses recorded</td></tr>`}</table>
+    <div style="text-align:center;margin:30px 0 10px;"><a href="${reportUrl}" style="background:#10b981;color:#fff;text-decoration:none;padding:14px 28px;border-radius:14px;font-weight:700;font-size:14px;">View Dashboard</a></div>
+    <p style="font-size:11px;color:#6b7280;text-align:center;border-top:1px solid #232836;padding-top:16px;">Automated monthly report for ${to}.</p>
+  </div>
+</body></html>`.trim();
+  const text = `Spendly Personal Finance\n\nMonthly report for ${monthLabel}\n\nHi ${name || "there"},\n\n• Monthly budget: ₹${budget.toLocaleString("en-IN")}\n• Total spent: ₹${spent.toLocaleString("en-IN")}\n• Remaining: ₹${remaining.toLocaleString("en-IN")}\n\nSpending by category:\n${textBreakdown || "No expenses recorded."}\n\nView your dashboard: ${reportUrl}`;
+
+  if (!resend) {
+    console.log(`[Resend (Dev Mode)]: Monthly report prepared for ${to} (${monthLabel})`);
+    return { success: true };
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: getSenderAddress("Spendly"),
+      to: [to],
+      subject: `Your ${monthLabel} spending report - Spendly`,
+      html,
+      text,
+      replyTo: "noreply@devforge.danishdev.me",
+      headers: { "X-Entity-Ref-ID": crypto.randomUUID() },
+    });
+    if (error) {
+      console.error("[Resend Error - Monthly Report]:", error);
+      return { success: false, error: error.message };
+    }
+    console.log(`[Resend Success]: Monthly report sent to ${to}, ID: ${data?.id}`);
+    return { success: true };
+  } catch (err) {
+    console.error("[Resend Exception - Monthly Report]:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Failed to send monthly report" };
+  }
+}
+
 export async function sendOverspendingAlertEmail({
   to,
   name,

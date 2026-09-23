@@ -162,7 +162,7 @@ return (
         {/* MONTH BUDGET */}
 
         <section
-          className="home-budget dashboard-enter"
+          className="home-budget mt-4 dashboard-enter"
           style={{ animationDelay: "200ms" }}
         >
           <div className="mb-3 flex items-center justify-between px-1">

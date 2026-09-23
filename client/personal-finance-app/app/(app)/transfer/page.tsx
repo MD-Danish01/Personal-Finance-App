@@ -234,15 +234,6 @@ function buildUpiUri(upiId: string, amount: number, recipientName?: string, note
 // Small UI helpers (no state)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function DemoTag() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
-      <Icon name="shield" size={10} />
-      DEMO
-    </span>
-  );
-}
-
 function DisclaimerBanner({ text = DEMO_DISCLAIMER }: { text?: string }) {
   return (
     <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/6 px-3 py-2.5 text-[11px] text-amber-700 dark:text-amber-400">
@@ -515,7 +506,6 @@ function QRScanner({ onScanned, onClose }: QRScannerProps) {
             <Icon name="qr-code" size={16} />
           </div>
           <h2 className="text-base font-bold text-foreground">Scan QR</h2>
-          <DemoTag />
         </div>
         <button
           type="button"
@@ -1645,10 +1635,6 @@ function TransferForm({ initial, onReview, onCancel }: TransferFormProps) {
           <h2 className="text-lg font-bold text-foreground">Send Money (Demo)</h2>
           <p className="text-xs text-muted">Simulate a transfer without real money</p>
         </div>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-          <Icon name="shield" size={11} />
-          DEMO MODE
-        </span>
       </div>
 
       <DisclaimerBanner />
@@ -1952,8 +1938,6 @@ function SuccessScreen({ transfer, onDone, onViewHistory }: SuccessScreenProps) 
           </div>
         ))}
       </Card>
-
-      <DisclaimerBanner text="Demo transaction — no real money was transferred." />
 
       <div className="flex gap-3">
         <button
@@ -2354,7 +2338,6 @@ export default function TransferPage() {
               <p className="mt-0.5 text-xs text-muted">Send money securely with Spendly</p>
             </div>
             <div className="flex items-center gap-2">
-              <DemoTag />
               <UserAvatar />
             </div>
           </header>
@@ -2383,63 +2366,8 @@ export default function TransferPage() {
             />
           </div>
 
-          {/* OR divider */}
-          <div className="dashboard-enter flex items-center gap-3" style={{ animationDelay: "180ms" }}>
-            <div className="flex-1 h-px bg-card-border" />
-            <span className="text-[11px] font-bold text-muted uppercase tracking-wider">or demo mode</span>
-            <div className="flex-1 h-px bg-card-border" />
-          </div>
-
-          {/* ── Demo section (below) ── */}
-          {/* Demo action cards */}
-          <div className="dashboard-enter grid grid-cols-2 gap-3" style={{ animationDelay: "240ms" }}>
-            <button
-              type="button"
-              onClick={() => setStep("form")}
-              className="group flex flex-col items-center gap-3 rounded-2xl border border-card-border bg-card p-5 shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md cursor-pointer"
-              aria-label="Open Send Money form"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary transition-transform group-hover:scale-105">
-                <Icon name="send" size={22} />
-              </span>
-              <span className="text-sm font-bold text-foreground">Send Money</span>
-              <span className="text-[11px] text-muted text-center leading-tight">Transfer via demo UPI</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setQrOrigin("demo"); setStep("qr-scanner"); }}
-              className="group flex flex-col items-center gap-3 rounded-2xl border border-card-border bg-card p-5 shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md cursor-pointer"
-              aria-label="Open QR scanner for demo transfer"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary transition-transform group-hover:scale-105">
-                <Icon name="qr-code" size={22} />
-              </span>
-              <span className="text-sm font-bold text-foreground">Scan QR</span>
-              <span className="text-[11px] text-muted text-center leading-tight">Scan a demo UPI QR</span>
-            </button>
-          </div>
-
-          {/* Show Demo QR */}
-          <div className="dashboard-enter" style={{ animationDelay: "300ms" }}>
-            <button
-              type="button"
-              onClick={() => setShowQRGen(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-card-border bg-muted-bg py-3 text-xs font-semibold text-muted hover:text-foreground hover:border-primary/40 transition-colors cursor-pointer"
-              aria-label="Show my demo QR code"
-            >
-              <Icon name="qr-code" size={14} />
-              Show My Demo QR
-            </button>
-          </div>
-
-          {/* Disclaimer */}
-          <div className="dashboard-enter" style={{ animationDelay: "360ms" }}>
-            <DisclaimerBanner />
-          </div>
-
           {/* Recent transfers */}
-          <div className="dashboard-enter" style={{ animationDelay: "440ms" }}>
+          <div className="dashboard-enter" style={{ animationDelay: "240ms" }}>
             <RecentTransfers transfers={transfers} />
           </div>
         </div>

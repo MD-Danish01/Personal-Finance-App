@@ -23,8 +23,12 @@ export interface StructuredFinancialContext {
   spentRupees: number;
   budgetRupees: number;
   dailySafeToSpendRupees: number;
+  remainingBudgetRupees: number;
+  remainingBudgetPaise: number;
   todaySpentRupees: number;
+  todaySpentPaise: number;
   todayDesignatedRupees: number;
+  todayDesignatedPaise: number;
   todayRemainingRupees: number;
   isTodayOverspent: boolean;
   remainingDays: number;
@@ -143,19 +147,31 @@ export async function getStructuredFinancialContext(
   const todaySpentPaise = Number(todayExpenseRows[0]?.total ?? 0);
   const todaySpentRupees = Math.round(todaySpentPaise / 100);
 
-  // Month-to-date expenses prior to today
-  const spentPriorToTodayPaise = Math.max(0, totalSpentPaise - todaySpentPaise);
-  // Designated daily safe-to-spend at the beginning of today
-  const availableAtStartOfTodayPaise = Math.max(0, budgetPaise - spentPriorToTodayPaise);
+  // Keep today's quota based on the full monthly budget. Income entered
+  // mid-month must not be divided across only the remaining calendar days.
+  const dailyQuotaPaise = Math.round(budgetPaise / lastDay);
+  const monthStart = new Date(curYear, curMonth - 1, 1);
+  const isNewUserThisMonth = profile
+    ? profile.createdAt >= monthStart
+    : false;
   const todayDesignatedRupees = Math.max(
     0,
-    Math.round(availableAtStartOfTodayPaise / remainingDays / 100),
+    Math.round(dailyQuotaPaise / 100),
   );
   const todayRemainingRupees = Math.max(0, todayDesignatedRupees - todaySpentRupees);
-  const isTodayOverspent = todayDesignatedRupees > 0 && todaySpentRupees >= todayDesignatedRupees;
+  const isTodayOverspent =
+    todayDesignatedRupees > 0 && todaySpentRupees > todayDesignatedRupees;
 
   // Safe-to-Spend for remaining days
-  const remainingBudgetPaise = Math.max(0, budgetPaise - totalSpentPaise);
+  const spentPriorToTodayPaise = Math.max(0, totalSpentPaise - todaySpentPaise);
+  const elapsedDaysBudgetPaise = dailyQuotaPaise * Math.max(0, currentDay - 1);
+  const consumedBeforeTodayPaise = isNewUserThisMonth
+    ? Math.max(spentPriorToTodayPaise, elapsedDaysBudgetPaise)
+    : spentPriorToTodayPaise;
+  const remainingBudgetPaise = Math.max(
+    0,
+    budgetPaise - consumedBeforeTodayPaise - todaySpentPaise,
+  );
   const dailySafeToSpendRupees = Math.max(
     0,
     Math.round(remainingBudgetPaise / remainingDays / 100),
@@ -220,8 +236,12 @@ export async function getStructuredFinancialContext(
     spentRupees,
     budgetRupees,
     dailySafeToSpendRupees,
+    remainingBudgetRupees: remainingBudgetPaise / 100,
+    remainingBudgetPaise,
     todaySpentRupees,
+    todaySpentPaise,
     todayDesignatedRupees,
+    todayDesignatedPaise: dailyQuotaPaise,
     todayRemainingRupees,
     isTodayOverspent,
     remainingDays,
@@ -245,17 +265,28 @@ export function simulatePurchaseImpact(
   itemName: string = "Prospective Expense",
   category: string = "Shopping",
 ): PurchaseSimulationResult {
-  const currentAvailableRupees = Math.max(0, context.budgetRupees - context.spentRupees);
-  const newAvailableRupees = Math.max(0, currentAvailableRupees - purchaseAmountRupees);
+  const purchaseAmountPaise = purchaseAmountRupees * 100;
+  const currentAvailablePaise = Math.max(0, context.remainingBudgetPaise);
   
-  // Future daily safe-to-spend after absorbing this purchase across remaining days
+  // Spread today's purchase impact across the days after today.
   const futureDays = Math.max(1, context.remainingDays - 1);
+
+  // Upcoming-day spending must stay anchored to the daily quota. Dividing an
+  // untouched monthly balance by only the days left can incorrectly produce a
+  // large rate late in the month (for example, ₹8,000 against a ₹2,500 quota).
+  const baselineDaily = Math.min(
+    context.todayDesignatedRupees,
+    context.dailySafeToSpendRupees,
+  );
+  const baselineDailyPaise = baselineDaily * 100;
   const newDailySafeToSpend = Math.max(
     0,
-    Math.round(newAvailableRupees / (context.remainingDays > 1 ? futureDays : 1)),
+    Math.round(
+      Math.max(0, baselineDailyPaise * futureDays - purchaseAmountPaise) /
+        futureDays /
+        100,
+    ),
   );
-
-  const baselineDaily = context.todayDesignatedRupees > 0 ? context.todayDesignatedRupees : context.dailySafeToSpendRupees;
   const dailyDropRupees = Math.max(0, baselineDaily - newDailySafeToSpend);
   const dropPercent =
     baselineDaily > 0
@@ -263,19 +294,28 @@ export function simulatePurchaseImpact(
       : 100;
 
   // Daily budget tracking
-  const isTodayAlreadyOverspent = context.isTodayOverspent || (context.todayDesignatedRupees > 0 && context.todaySpentRupees >= context.todayDesignatedRupees);
-  const projectedTodaySpend = context.todaySpentRupees + purchaseAmountRupees;
-  const willExceedTodayBudget = context.todayDesignatedRupees > 0 && projectedTodaySpend > context.todayDesignatedRupees;
-  const todayOverspentDelta = willExceedTodayBudget ? Math.max(0, projectedTodaySpend - context.todayDesignatedRupees) : 0;
+  const isTodayAlreadyOverspent = context.isTodayOverspent;
+  const projectedTodaySpendPaise = context.todaySpentPaise + purchaseAmountPaise;
+  const willExceedTodayBudget =
+    context.todayDesignatedPaise > 0 &&
+    projectedTodaySpendPaise > context.todayDesignatedPaise;
+  const todayOverspentDelta = willExceedTodayBudget
+    ? Math.max(
+        0,
+        Math.round(
+          (projectedTodaySpendPaise - context.todayDesignatedPaise) / 100,
+        ),
+      )
+    : 0;
 
   let status: "SAFE" | "TIGHT" | "DEFICIT" = "SAFE";
   let statusLabel = "Safe & Affordable";
   let todayImpactNote = "";
 
-  if (purchaseAmountRupees > currentAvailableRupees) {
+  if (purchaseAmountPaise > currentAvailablePaise) {
     status = "DEFICIT";
     statusLabel = "Causes Monthly Deficit";
-    todayImpactNote = `This ₹${purchaseAmountRupees.toLocaleString("en-IN")} purchase exceeds your remaining monthly unallocated funds (₹${currentAvailableRupees.toLocaleString("en-IN")}) by ₹${(purchaseAmountRupees - currentAvailableRupees).toLocaleString("en-IN")}, forcing you to dip into savings.`;
+    todayImpactNote =     `This ₹${purchaseAmountRupees.toLocaleString("en-IN")} purchase exceeds your remaining monthly unallocated funds (₹${(currentAvailablePaise / 100).toLocaleString("en-IN")}) by ₹${((purchaseAmountPaise - currentAvailablePaise) / 100).toLocaleString("en-IN")}, forcing you to dip into savings.`;
   } else if (isTodayAlreadyOverspent) {
     status = "DEFICIT";
     statusLabel = "Exceeds Today's Budget";

@@ -4,6 +4,7 @@ import { getAuthenticatedUser, unauthorizedResponse } from "@/lib/auth-helpers";
 import { eq, desc, and, gte, lte, lt, sql } from "drizzle-orm";
 import { computeRelativeDate } from "@/lib/constants";
 import { sendOverspendingAlertEmail } from "@/lib/email";
+import { sendMonthlyReportIfDue } from "@/lib/monthly-report";
 
 const VALID_CATEGORIES = [
   "Food",
@@ -82,11 +83,14 @@ export async function checkAndSendOverspendAlert(
     const todaySpentPaise = Number(expenseTotals[0]?.todayTotal ?? 0);
     const todaySpentRupees = Math.round(todaySpentPaise / 100);
 
-    const spentPriorToTodayPaise = Math.max(0, monthSpentPaise - todaySpentPaise);
-    const availableAtStartOfTodayPaise = Math.max(0, monthlyIncome - spentPriorToTodayPaise);
+    const dailyQuotaPaise = Math.round(monthlyIncome / lastDay);
+    const monthStart = new Date(curYear, curMonth - 1, 1);
+    const isNewUserThisMonth = profile
+      ? profile.createdAt >= monthStart
+      : false;
     const todayDesignatedRupees = Math.max(
       0,
-      Math.round(availableAtStartOfTodayPaise / remainingDays / 100),
+      Math.round(dailyQuotaPaise / 100),
     );
 
     // --- deduplication window: today 00:00:00 UTC to tomorrow 00:00:00 UTC ---
@@ -97,7 +101,19 @@ export async function checkAndSendOverspendAlert(
       // === BREACH PATH ===
       const overspentAmount = todaySpentRupees - todayDesignatedRupees;
       const futureDays = Math.max(1, remainingDays - 1);
-      const remainingMonthPaise = Math.max(0, monthlyIncome - monthSpentPaise);
+      const spentPriorToTodayPaise = Math.max(
+        0,
+        monthSpentPaise - todaySpentPaise,
+      );
+      const elapsedDaysBudgetPaise =
+        dailyQuotaPaise * Math.max(0, currentDay - 1);
+      const consumedBeforeTodayPaise = isNewUserThisMonth
+        ? Math.max(spentPriorToTodayPaise, elapsedDaysBudgetPaise)
+        : spentPriorToTodayPaise;
+      const remainingMonthPaise = Math.max(
+        0,
+        monthlyIncome - consumedBeforeTodayPaise - todaySpentPaise,
+      );
       const newDailySafeToSpend = Math.max(
         0,
         Math.round(remainingMonthPaise / (remainingDays > 1 ? futureDays : 1) / 100),
@@ -243,6 +259,9 @@ export async function POST(req: NextRequest) {
     if (validatedType === "expense") {
       void checkAndSendOverspendAlert(user.id, user.email, user.name, validatedDate);
     }
+    void sendMonthlyReportIfDue(user.id).catch((error) =>
+      console.error("Monthly report error:", error),
+    );
 
     return NextResponse.json(
       {

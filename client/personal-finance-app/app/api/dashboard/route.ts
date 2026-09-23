@@ -6,6 +6,7 @@ import {
   ALLOCATION_LABELS,
   ALLOCATION_COLORS,
 } from "@/lib/constants";
+import { sendMonthlyReportIfDue } from "@/lib/monthly-report";
 
 export async function GET() {
  
@@ -13,6 +14,9 @@ export async function GET() {
   if (!user) return unauthorizedResponse();
 
   try {
+    void sendMonthlyReportIfDue(user.id).catch((error) =>
+      console.error("Monthly report error:", error),
+    );
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
@@ -128,12 +132,17 @@ export async function GET() {
     const todaySpentPaise = Number(todayExpenseRows[0]?.total ?? 0);
     const todaySpentRupees = Math.round(todaySpentPaise / 100);
 
-    // Baseline designated allowance for today at the start of day
-    const spentPriorToTodayPaise = Math.max(0, monthSpent - todaySpentPaise);
-    const availableAtStartOfTodayPaise = Math.max(0, monthBudget - spentPriorToTodayPaise);
+    // Keep today's quota anchored to the full monthly budget. This prevents
+    // setting up income mid-month from incorrectly dividing the full income
+    // across only the days remaining in the month.
+    const dailyQuotaPaise = Math.round(monthBudget / daysInMonth);
+    const monthStart = new Date(year, month - 1, 1);
+    const isNewUserThisMonth = profile
+      ? profile.createdAt >= monthStart
+      : false;
     const todayDesignatedRupees = Math.max(
       0,
-      Math.round(availableAtStartOfTodayPaise / remainingDays / 100),
+      Math.round(dailyQuotaPaise / 100),
     );
 
     const isOverDailyBudget = todayDesignatedRupees > 0 && todaySpentRupees > todayDesignatedRupees;
@@ -144,7 +153,15 @@ export async function GET() {
 
     // Future daily safe-to-spend baseline across remaining days after today
     const futureDays = Math.max(1, remainingDays - 1);
-    const remainingMonthPaise = Math.max(0, monthBudget - monthSpent);
+    const spentBeforeTodayPaise = Math.max(0, monthSpent - todaySpentPaise);
+    const elapsedDaysBudgetPaise = dailyQuotaPaise * Math.max(0, dayOfMonth - 1);
+    const consumedBeforeTodayPaise = isNewUserThisMonth
+      ? Math.max(spentBeforeTodayPaise, elapsedDaysBudgetPaise)
+      : spentBeforeTodayPaise;
+    const remainingMonthPaise = Math.max(
+      0,
+      monthBudget - consumedBeforeTodayPaise - todaySpentPaise,
+    );
     const baselineDailyRate = Math.max(
       0,
       Math.round(remainingMonthPaise / (remainingDays > 1 ? futureDays : 1) / 100),

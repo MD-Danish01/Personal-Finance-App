@@ -10,7 +10,7 @@
  *   No UPI PIN, OTP, bank password, CVV, or card number is ever collected.
  */
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useSession } from "next-auth/react";
 import { Icon } from "@/components/ui/Icon";
 import { Card } from "@/components/ui/Card";
@@ -138,19 +138,63 @@ function validateUpiId(id: string): boolean {
   return /^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+$/.test(id.trim());
 }
 
-function loadTransfers(): CompletedTransfer[] {
-  if (typeof window === "undefined") return [];
+const EMPTY_TRANSFERS: CompletedTransfer[] = [];
+const emptySubscribe = () => () => {};
+
+function useIsClient(): boolean {
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
+
+function subscribeTransfers(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", callback);
+  window.addEventListener("spendly:transfers-updated", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("spendly:transfers-updated", callback);
+  };
+}
+
+let lastRawTransfers: string | null = null;
+let cachedTransfers: CompletedTransfer[] = [];
+
+function getTransfersSnapshot(): CompletedTransfer[] {
+  if (typeof window === "undefined") return EMPTY_TRANSFERS;
   try {
     const raw = localStorage.getItem(LS_KEY);
-    return raw ? (JSON.parse(raw) as CompletedTransfer[]) : [];
+    if (raw === lastRawTransfers) return cachedTransfers;
+    lastRawTransfers = raw;
+    cachedTransfers = raw ? (JSON.parse(raw) as CompletedTransfer[]) : [];
+    return cachedTransfers;
   } catch {
-    return [];
+    return EMPTY_TRANSFERS;
   }
 }
 
-function saveTransfers(transfers: CompletedTransfer[]): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(LS_KEY, JSON.stringify(transfers));
+function getServerTransfersSnapshot(): CompletedTransfer[] {
+  return EMPTY_TRANSFERS;
+}
+
+function useTransfers(): [CompletedTransfer[], (transfers: CompletedTransfer[]) => void] {
+  const transfers = useSyncExternalStore(
+    subscribeTransfers,
+    getTransfersSnapshot,
+    getServerTransfersSnapshot
+  );
+
+  const setTransfers = useCallback((newTransfers: CompletedTransfer[]) => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(newTransfers));
+      lastRawTransfers = JSON.stringify(newTransfers);
+      cachedTransfers = newTransfers;
+      window.dispatchEvent(new Event("spendly:transfers-updated"));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  return [transfers, setTransfers];
 }
 function parseUpiQR(raw: string): { recipientName: string; upiId: string } | null {
   try {
@@ -1935,14 +1979,10 @@ function SuccessScreen({ transfer, onDone, onViewHistory }: SuccessScreenProps) 
 // Recent Transfers List
 // ─────────────────────────────────────────────────────────────────────────────
 
-function RecentTransfers({ transfers, mounted }: { transfers: CompletedTransfer[]; mounted?: boolean }) {
-  const [now, setNow] = useState<number>(0);
+function RecentTransfers({ transfers }: { transfers: CompletedTransfer[] }) {
+  const isClient = useIsClient();
 
-  useEffect(() => {
-    setNow(Date.now());
-  }, []);
-
-  if (!mounted || transfers.length === 0) {
+  if (!isClient || transfers.length === 0) {
     return (
       <section className="recent-transfers-section pt-2">
         <div className="flex items-center justify-between px-1 mb-3">
@@ -2009,7 +2049,7 @@ function RecentTransfers({ transfers, mounted }: { transfers: CompletedTransfer[
             </div>
             <div className="text-right shrink-0">
               <p className="text-sm font-bold text-foreground">{formatINR(t.amount)}</p>
-              <p className="text-[11px] text-muted mt-0.5">{now ? relativeTransferDate(t.timestamp, now) : ""}</p>
+              <p className="text-[11px] text-muted mt-0.5">{formatTransferDate(t.timestamp)}</p>
             </div>
           </div>
         ))}
@@ -2019,14 +2059,16 @@ function RecentTransfers({ transfers, mounted }: { transfers: CompletedTransfer[
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// relativeTransferDate — pure helper used by RecentTransfers
+// formatTransferDate — pure helper used by RecentTransfers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function relativeTransferDate(isoString: string, now: number): string {
-  const diff = Math.floor((now - new Date(isoString).getTime()) / 86_400_000);
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Yesterday";
-  return `${diff} days ago`;
+function formatTransferDate(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+  } catch {
+    return "";
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2041,15 +2083,9 @@ export default function TransferPage() {
   const [step, setStep] = useState<TransferStep>("home");
   const [formData, setFormData] = useState<TransferFormData | null>(null);
   const [completedTransfer, setCompletedTransfer] = useState<CompletedTransfer | null>(null);
-  const [transfers, setTransfers] = useState<CompletedTransfer[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [transfers, setTransfers] = useTransfers();
   const [showQRGen, setShowQRGen] = useState(false);
   const submittingRef = useRef(false);
-
-  useEffect(() => {
-    setTransfers(loadTransfers());
-    setMounted(true);
-  }, []);
 
   // ── UPI pay flow state ──
   const [upiPayData, setUpiPayData] = useState<UpiPayFormData | null>(null);
@@ -2173,7 +2209,6 @@ export default function TransferPage() {
 
               const updated = [completed, ...transfers].slice(0, 50);
               setTransfers(updated);
-              saveTransfers(updated);
               setCompletedTransfer(completed);
               setIsRazorpayLoading(false);
               setStep("razorpay-success");
@@ -2211,7 +2246,7 @@ export default function TransferPage() {
         setRazorpayError(msg);
       }
     },
-    [session, transfers],
+    [session, transfers, setTransfers],
   );
 
   // ── Demo flow: confirm the simulated transfer ──
@@ -2241,7 +2276,6 @@ export default function TransferPage() {
     // Persist to localStorage so history survives page reload
     const updated = [completed, ...transfers].slice(0, 50);
     setTransfers(updated);
-    saveTransfers(updated);
 
     // Create a real Spendly transaction so it appears in Money, Analytics, AI Insights
     const merchantLabel = formData.recipientName.trim()
@@ -2270,7 +2304,7 @@ export default function TransferPage() {
     setCompletedTransfer(completed);
     submittingRef.current = false;
     setStep("success");
-  }, [formData, transfers]);
+  }, [formData, transfers, setTransfers]);
 
   // ── UPI flow: launch UPI app via upi:// URI ──
   const handleUpiPay = useCallback((data: UpiPayFormData) => {
@@ -2406,7 +2440,7 @@ export default function TransferPage() {
 
           {/* Recent transfers */}
           <div className="dashboard-enter" style={{ animationDelay: "440ms" }}>
-            <RecentTransfers transfers={transfers} mounted={mounted} />
+            <RecentTransfers transfers={transfers} />
           </div>
         </div>
       )}

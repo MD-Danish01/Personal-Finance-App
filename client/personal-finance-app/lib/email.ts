@@ -176,118 +176,87 @@ export async function sendOverspendingAlertEmail({
   <meta name="supported-color-schemes" content="light dark" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="x-apple-disable-message-reformatting" />
-  <title>Spendly Daily Spending Summary</title>
+  <title>Your Daily Spending Summary - Spendly</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #090d16; color: #f1f5f9; margin: 0; padding: 32px 16px;">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0c0e12; color: #f3f4f6; margin: 0; padding: 40px 20px;">
   <!-- Preview text -->
   <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; max-width: 0px; opacity: 0;">
-    Daily spending summary: ₹${todaySpent.toLocaleString("en-IN")} spent of ₹${dailyLimit.toLocaleString("en-IN")} daily plan.
+    Your daily spending summary: ₹${todaySpent.toLocaleString("en-IN")} recorded today for ${formattedDate}.
   </div>
 
-  <div style="max-width: 540px; margin: 0 auto; background-color: #111726; border: 1px solid #1f293d; border-radius: 24px; padding: 32px 28px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);">
-    
-    <!-- Header Badge -->
-    <div style="margin-bottom: 20px;">
-      <span style="display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #10b981; background-color: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); padding: 5px 12px; border-radius: 999px;">
-        Spendly Budget Update
+  <div style="max-width: 540px; margin: 0 auto; background-color: #161a22; border: 1px solid #232836; border-radius: 24px; padding: 36px 32px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);">
+    <div style="margin-bottom: 24px;">
+      <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #10b981; background: rgba(16, 185, 129, 0.12); padding: 4px 10px; border-radius: 999px;">
+        Spendly Personal Finance
       </span>
     </div>
 
-    <!-- Title -->
-    <h1 style="font-size: 22px; font-weight: 800; color: #ffffff; margin: 0 0 12px 0; letter-spacing: -0.4px;">
+    <h1 style="font-size: 22px; font-weight: 800; color: #ffffff; margin: 0 0 12px 0; letter-spacing: -0.5px;">
       Daily Spending Summary
     </h1>
 
-    <!-- Intro -->
     <p style="font-size: 14px; line-height: 22px; color: #94a3b8; margin: 0 0 24px 0;">
       Hi ${name || "there"},<br><br>
-      Here is your daily spending summary for today. You have spent <strong style="color: #f87171;">₹${todaySpent.toLocaleString("en-IN")}</strong>, which is <strong style="color: #f87171;">+₹${overspentAmount.toLocaleString("en-IN")}</strong> relative to your planned daily allowance of <strong style="color: #ffffff;">₹${dailyLimit.toLocaleString("en-IN")}</strong>.
+      Here is your daily spending summary for <strong>${formattedDate}</strong>. You recorded <strong>₹${todaySpent.toLocaleString("en-IN")}</strong> in expenses today, compared to your planned daily allowance of <strong>₹${dailyLimit.toLocaleString("en-IN")}</strong>.
     </p>
 
-    <!-- Metrics Summary Card -->
-    <div style="background-color: #0b0f19; border: 1px solid #1e293b; border-radius: 16px; padding: 18px; margin-bottom: 24px;">
+    <!-- Spending Breakdown Box -->
+    <div style="background-color: #0c0e12; border: 1px solid #232836; border-radius: 16px; padding: 20px; margin: 24px 0;">
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
-          <td style="padding: 6px 0; font-size: 12px; color: #64748b;">Daily Designated Limit:</td>
-          <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #cbd5e1; text-align: right; font-family: monospace;">₹${dailyLimit.toLocaleString("en-IN")}</td>
+          <td style="padding: 6px 0; font-size: 13px; color: #94a3b8;">Planned Daily Allowance</td>
+          <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #f3f4f6; text-align: right; font-family: monospace;">₹${dailyLimit.toLocaleString("en-IN")}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; font-size: 12px; color: #64748b;">Today's Total Spending:</td>
-          <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #f87171; text-align: right; font-family: monospace;">₹${todaySpent.toLocaleString("en-IN")}</td>
+          <td style="padding: 6px 0; font-size: 13px; color: #94a3b8;">Today's Total Expenses</td>
+          <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #f3f4f6; text-align: right; font-family: monospace;">₹${todaySpent.toLocaleString("en-IN")}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; font-size: 12px; color: #64748b;">Over Limit Amount:</td>
-          <td style="padding: 6px 0; font-size: 14px; font-weight: 800; color: #ef4444; text-align: right; font-family: monospace;">+₹${overspentAmount.toLocaleString("en-IN")}</td>
+          <td style="padding: 6px 0; font-size: 13px; color: #94a3b8;">Difference</td>
+          <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #f87171; text-align: right; font-family: monospace;">+₹${overspentAmount.toLocaleString("en-IN")}</td>
         </tr>
-        <tr style="border-top: 1px solid #1e293b;">
-          <td style="padding: 10px 0 4px 0; font-size: 12px; color: #38bdf8; font-weight: 600;">Adjusted Daily Safe-to-Spend:</td>
-          <td style="padding: 10px 0 4px 0; font-size: 14px; font-weight: 800; color: #38bdf8; text-align: right; font-family: monospace;">₹${newDailySafeToSpend.toLocaleString("en-IN")}/day</td>
+        <tr style="border-top: 1px solid #232836;">
+          <td style="padding: 12px 0 4px 0; font-size: 13px; color: #10b981; font-weight: 600;">Recommended Allowance (Next ${remainingDays} Days)</td>
+          <td style="padding: 12px 0 4px 0; font-size: 14px; font-weight: 800; color: #10b981; text-align: right; font-family: monospace;">₹${newDailySafeToSpend.toLocaleString("en-IN")}/day</td>
         </tr>
       </table>
     </div>
 
-    <!-- Recommendations -->
-    <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #cbd5e1; margin: 0 0 12px 0;">
-      How to keep your month on track
-    </h2>
+    <p style="font-size: 13px; line-height: 20px; color: #94a3b8; margin: 0 0 24px 0;">
+      To keep your monthly plan on target, keeping discretionary expenses around <strong>₹${newDailySafeToSpend.toLocaleString("en-IN")}/day</strong> for the remainder of the month will keep your planned savings intact.
+    </p>
 
-    <div style="margin-bottom: 24px;">
-      <div style="margin-bottom: 12px; padding: 12px 14px; background-color: rgba(239, 68, 68, 0.06); border-left: 3px solid #ef4444; border-radius: 8px;">
-        <strong style="font-size: 13px; color: #f87171;">Lower Daily Allowance for Remaining ${remainingDays} Days</strong>
-        <p style="margin: 4px 0 0 0; font-size: 12px; line-height: 18px; color: #94a3b8;">
-          To prevent a month-end cashflow deficit, capping your discretionary expenses at ₹${newDailySafeToSpend}/day will keep your savings protected.
-        </p>
-      </div>
-
-      <div style="margin-bottom: 12px; padding: 12px 14px; background-color: rgba(245, 158, 11, 0.06); border-left: 3px solid #f59e0b; border-radius: 8px;">
-        <strong style="font-size: 13px; color: #fbbf24;">Protect Your Priority Savings Goals</strong>
-        <p style="margin: 4px 0 0 0; font-size: 12px; line-height: 18px; color: #94a3b8;">
-          Pausing non-essential purchases for the rest of today ensures your scheduled goal contributions stay on schedule.
-        </p>
-      </div>
-
-      <div style="padding: 12px 14px; background-color: rgba(14, 165, 233, 0.06); border-left: 3px solid #0ea5e9; border-radius: 8px;">
-        <strong style="font-size: 13px; color: #38bdf8;">Preserve Your Emergency Buffer</strong>
-        <p style="margin: 4px 0 0 0; font-size: 12px; line-height: 18px; color: #94a3b8;">
-          Avoid dipping into your safety cushion by postponing optional shopping until tomorrow's fresh daily allowance.
-        </p>
-      </div>
-    </div>
-
-    <!-- Call to action -->
-    <div style="text-align: center; margin: 30px 0 16px 0;">
-      <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none; padding: 13px 28px; border-radius: 12px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
-        Open Spendly Dashboard
+    <!-- Button -->
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${dashboardUrl}" style="display: inline-block; background-color: #10b981; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 14px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+        View Dashboard
       </a>
     </div>
 
     <!-- Footer -->
-    <div style="font-size: 11px; line-height: 18px; color: #64748b; text-align: center; margin: 24px 0 0 0; border-top: 1px solid #1e293b; padding-top: 16px;">
-      <p style="margin: 0 0 6px 0;">
-        This is an automated account update sent to ${to} regarding your Spendly budget plan.
-      </p>
-      <p style="margin: 0;">
-        <a href="${dashboardUrl}" style="color: #10b981; text-decoration: none;">View Dashboard</a> &middot; Spendly Personal Finance
-      </p>
-    </div>
+    <p style="font-size: 11px; color: #6b7280; margin: 24px 0 0 0; border-top: 1px solid #232836; padding-top: 16px; text-align: center;">
+      This is an automated update for ${to} regarding your Spendly financial plan.
+    </p>
   </div>
 </body>
 </html>
   `.trim();
 
   const text = `
-Spendly Daily Spending Summary
+Spendly Personal Finance
+
+Daily Spending Summary (${formattedDate})
 
 Hi ${name || "there"},
 
-Here is your daily spending summary for today (${formattedDate}):
+Here is your daily spending summary for ${formattedDate}:
 
-• Daily Designated Limit: ₹${dailyLimit.toLocaleString("en-IN")}
-• Today's Total Spending: ₹${todaySpent.toLocaleString("en-IN")}
-• Difference: ₹${overspentAmount.toLocaleString("en-IN")} over daily limit
-• Adjusted Daily Allowance: ₹${newDailySafeToSpend.toLocaleString("en-IN")}/day for the remaining ${remainingDays} days.
+• Planned Daily Allowance: ₹${dailyLimit.toLocaleString("en-IN")}
+• Today's Total Expenses: ₹${todaySpent.toLocaleString("en-IN")}
+• Difference: +₹${overspentAmount.toLocaleString("en-IN")}
+• Recommended Daily Allowance: ₹${newDailySafeToSpend.toLocaleString("en-IN")}/day for the remaining ${remainingDays} days.
 
-To keep your monthly savings on track, we recommend pacing discretionary purchases for the rest of today.
+To keep your monthly plan on target, pacing discretionary expenses for the remainder of the month will keep your savings protected.
 
 View your full dashboard:
 ${dashboardUrl}

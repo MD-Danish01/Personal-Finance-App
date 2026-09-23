@@ -176,32 +176,32 @@ export async function sendOverspendingAlertEmail({
   <meta name="supported-color-schemes" content="light dark" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="x-apple-disable-message-reformatting" />
-  <title>Spendly Daily Budget Notice</title>
+  <title>Spendly Daily Spending Summary</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #090d16; color: #f1f5f9; margin: 0; padding: 32px 16px;">
-  <!-- Hidden preview text (improves inbox preview and spam score) -->
+  <!-- Preview text -->
   <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; max-width: 0px; opacity: 0;">
-    Your daily spending update: You have spent ₹${todaySpent.toLocaleString("en-IN")} of your ₹${dailyLimit.toLocaleString("en-IN")} quota today.
+    Daily spending summary: ₹${todaySpent.toLocaleString("en-IN")} spent of ₹${dailyLimit.toLocaleString("en-IN")} daily plan.
   </div>
 
   <div style="max-width: 540px; margin: 0 auto; background-color: #111726; border: 1px solid #1f293d; border-radius: 24px; padding: 32px 28px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);">
     
     <!-- Header Badge -->
     <div style="margin-bottom: 20px;">
-      <span style="display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #ef4444; background-color: rgba(239, 68, 68, 0.14); border: 1px solid rgba(239, 68, 68, 0.3); padding: 5px 12px; border-radius: 999px;">
-        Daily Budget Notice
+      <span style="display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #10b981; background-color: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); padding: 5px 12px; border-radius: 999px;">
+        Spendly Budget Update
       </span>
     </div>
 
     <!-- Title -->
     <h1 style="font-size: 22px; font-weight: 800; color: #ffffff; margin: 0 0 12px 0; letter-spacing: -0.4px;">
-      Daily Safe-to-Spend Limit Reached
+      Daily Spending Summary
     </h1>
 
     <!-- Intro -->
     <p style="font-size: 14px; line-height: 22px; color: #94a3b8; margin: 0 0 24px 0;">
       Hi ${name || "there"},<br><br>
-      Your Spendly budget guard recorded that you have spent <strong style="color: #f87171;">₹${todaySpent.toLocaleString("en-IN")}</strong> today, which exceeds your planned daily limit of <strong style="color: #ffffff;">₹${dailyLimit.toLocaleString("en-IN")}</strong> by <strong style="color: #ef4444;">+₹${overspentAmount.toLocaleString("en-IN")}</strong>.
+      Here is your daily spending summary for today. You have spent <strong style="color: #f87171;">₹${todaySpent.toLocaleString("en-IN")}</strong>, which is <strong style="color: #f87171;">+₹${overspentAmount.toLocaleString("en-IN")}</strong> relative to your planned daily allowance of <strong style="color: #ffffff;">₹${dailyLimit.toLocaleString("en-IN")}</strong>.
     </p>
 
     <!-- Metrics Summary Card -->
@@ -216,7 +216,7 @@ export async function sendOverspendingAlertEmail({
           <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: #f87171; text-align: right; font-family: monospace;">₹${todaySpent.toLocaleString("en-IN")}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; font-size: 12px; color: #64748b;">Overspent Amount:</td>
+          <td style="padding: 6px 0; font-size: 12px; color: #64748b;">Over Limit Amount:</td>
           <td style="padding: 6px 0; font-size: 14px; font-weight: 800; color: #ef4444; text-align: right; font-family: monospace;">+₹${overspentAmount.toLocaleString("en-IN")}</td>
         </tr>
         <tr style="border-top: 1px solid #1e293b;">
@@ -261,15 +261,13 @@ export async function sendOverspendingAlertEmail({
       </a>
     </div>
 
-    <!-- Footer with required unsubscribe & preferences links -->
+    <!-- Footer -->
     <div style="font-size: 11px; line-height: 18px; color: #64748b; text-align: center; margin: 24px 0 0 0; border-top: 1px solid #1e293b; padding-top: 16px;">
       <p style="margin: 0 0 6px 0;">
-        This is an automated transactional notice sent to ${to} regarding your Spendly daily budget settings.
+        This is an automated account update sent to ${to} regarding your Spendly budget plan.
       </p>
       <p style="margin: 0;">
-        <a href="${dashboardUrl}" style="color: #94a3b8; text-decoration: underline;">Manage notification preferences</a> &middot; 
-        <a href="${dashboardUrl}" style="color: #94a3b8; text-decoration: underline;">Unsubscribe</a> &middot; 
-        Spendly Personal Finance
+        <a href="${dashboardUrl}" style="color: #10b981; text-decoration: none;">View Dashboard</a> &middot; Spendly Personal Finance
       </p>
     </div>
   </div>
@@ -278,23 +276,20 @@ export async function sendOverspendingAlertEmail({
   `.trim();
 
   const text = `
-Spendly Daily Budget Notice
+Spendly Daily Spending Summary
 
 Hi ${name || "there"},
 
-This is your daily spending summary for today.
+Here is your daily spending summary for today (${formattedDate}):
 
 • Daily Designated Limit: ₹${dailyLimit.toLocaleString("en-IN")}
 • Today's Total Spending: ₹${todaySpent.toLocaleString("en-IN")}
-• Over Limit by: ₹${overspentAmount.toLocaleString("en-IN")}
+• Difference: ₹${overspentAmount.toLocaleString("en-IN")} over daily limit
 • Adjusted Daily Allowance: ₹${newDailySafeToSpend.toLocaleString("en-IN")}/day for the remaining ${remainingDays} days.
 
-To keep your monthly savings on track, we recommend pausing discretionary purchases for the rest of today.
+To keep your monthly savings on track, we recommend pacing discretionary purchases for the rest of today.
 
 View your full dashboard:
-${dashboardUrl}
-
-Manage notification preferences or unsubscribe:
 ${dashboardUrl}
   `.trim();
 
@@ -304,18 +299,16 @@ ${dashboardUrl}
   }
 
   try {
-    const fromAddress = getSenderAddress("Spendly Alerts");
+    const fromAddress = getSenderAddress("Spendly");
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: [to],
-      subject: `Spendly Daily Budget Notice: Limit reached (${formattedDate})`,
+      subject: `Daily spending summary for ${formattedDate} - Spendly`,
       html,
       text,
       replyTo: "noreply@devforge.danishdev.me",
       headers: {
         "X-Entity-Ref-ID": crypto.randomUUID(),
-        "List-Unsubscribe": `<${dashboardUrl}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });
 

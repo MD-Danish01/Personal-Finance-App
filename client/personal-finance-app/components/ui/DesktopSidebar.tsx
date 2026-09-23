@@ -8,6 +8,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 const navigation: { href: string; label: string; icon: IconName }[] = [
   { href: "/home", label: "Home", icon: "home" },
   { href: "/money", label: "Money", icon: "wallet" },
+  { href: "/transfer", label: "Transfer", icon: "transfer" },
   { href: "/plan", label: "Plan", icon: "plan" },
   { href: "/goals", label: "Goals", icon: "target" },
   { href: "/insights", label: "Insights", icon: "trending-up" },

@@ -14,6 +14,7 @@ interface Tab {
 const TABS: Tab[] = [
   { label: "Home", href: "/home", icon: "home", activeIcon: "home-filled" },
   { label: "Money", href: "/money", icon: "money", activeIcon: "money-filled" },
+  { label: "Transfer", href: "/transfer", icon: "transfer", activeIcon: "transfer-filled" },
   { label: "Plan", href: "/plan", icon: "plan", activeIcon: "plan-filled" },
   { label: "Goals", href: "/goals", icon: "target", activeIcon: "target-filled" },
   {
@@ -32,7 +33,7 @@ export function BottomNav() {
       className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-card-border bg-card/90 backdrop-blur-md transition-colors duration-150 shadow-lg"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <ul className="grid grid-cols-5 px-2 py-2">
+      <ul className="grid grid-cols-6 px-1 py-2">
         {TABS.map((tab) => {
           const isActive =
             pathname === tab.href || pathname.startsWith(`${tab.href}/`);
@@ -40,7 +41,7 @@ export function BottomNav() {
             <li key={tab.href}>
               <Link
                 href={tab.href}
-                className={`flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition-all duration-150 cursor-pointer ${
+                className={`flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-medium transition-all duration-150 cursor-pointer ${
                   isActive
                     ? "text-primary font-semibold scale-105"
                     : "text-muted hover:text-foreground"

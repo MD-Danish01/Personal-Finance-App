@@ -29,9 +29,11 @@ import {
   Palette,
   Pencil,
   Plus,
+  QrCode,
   Receipt,
   RefreshCw,
   Search,
+  Send,
   Settings,
   Settings2,
   Shield,
@@ -62,6 +64,8 @@ export type IconName =
   | "target-filled"
   | "insights"
   | "insights-filled"
+  | "transfer"
+  | "transfer-filled"
   | "bell"
   | "search"
   | "filter"
@@ -106,7 +110,9 @@ export type IconName =
   | "trash-2"
   | "palette"
   | "copy"
-  | "pencil";
+  | "pencil"
+  | "send"
+  | "qr-code";
 
 interface IconProps {
   name: IconName;
@@ -126,6 +132,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   "target-filled": Target,
   insights: TrendingUp,
   "insights-filled": TrendingUp,
+  transfer: Send,
+  "transfer-filled": Send,
   bell: Bell,
   search: Search,
   filter: Filter,
@@ -171,6 +179,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   palette: Palette,
   copy: Copy,
   pencil: Pencil,
+  send: Send,
+  "qr-code": QrCode,
 };
 
 export function Icon({ name, size = 20, className, strokeWidth = 1.8 }: IconProps) {

@@ -12,6 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useSession } from "next-auth/react";
+import NextImage from "next/image";
 import { Icon } from "@/components/ui/Icon";
 import { Card } from "@/components/ui/Card";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -19,7 +20,6 @@ import { formatINR } from "@/lib/format";
 import type { Category } from "@/lib/types";
 import {
   RazorpayGatewayHeroArt,
-  UpiMobileArt,
   TransferSuccessArt,
   EmptyTransfersArt,
   SecurityShieldArt,
@@ -615,7 +615,7 @@ function QRScanner({ onScanned, onClose }: QRScannerProps) {
                   type="text"
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
-                  placeholder="e.g. Rahul Sharma"
+                  placeholder=" Enter Name"
                   className="w-full px-3 py-2 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -628,7 +628,7 @@ function QRScanner({ onScanned, onClose }: QRScannerProps) {
                   type="text"
                   value={manualUpi}
                   onChange={(e) => { setManualUpi(e.target.value); setManualError(""); }}
-                  placeholder="e.g. rahul@demo"
+                  placeholder="Enter UPI ID"
                   required
                   className="w-full px-3 py-2 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground outline-none focus:ring-2 focus:ring-primary font-mono"
                   aria-describedby={manualError ? "qr-upi-err" : undefined}
@@ -711,7 +711,7 @@ function UpiPayForm({ initial, onPay, onCancel }: UpiPayFormProps) {
     if (!form.upiId.trim()) {
       e.upiId = "Please enter a UPI ID.";
     } else if (!validateUpiId(form.upiId)) {
-      e.upiId = "Enter a valid UPI ID (e.g. rahul@upi)";
+      e.upiId = "Enter a valid UPI ID (Enter UPI ID)";
     }
     const num = parseFloat(form.amount);
     if (!form.amount.trim()) {
@@ -764,7 +764,7 @@ function UpiPayForm({ initial, onPay, onCancel }: UpiPayFormProps) {
               inputMode="email"
               value={form.upiId}
               onChange={setF("upiId")}
-              placeholder="e.g. rahul@upi"
+              placeholder="Enter UPI ID"
               autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-muted/50 font-mono"
               aria-describedby={errors.upiId ? "upif-upi-err" : undefined}
@@ -821,7 +821,7 @@ function UpiPayForm({ initial, onPay, onCancel }: UpiPayFormProps) {
               type="text"
               value={form.recipientName}
               onChange={setF("recipientName")}
-              placeholder="e.g. Rahul Sharma"
+              placeholder="Enter Name"
               autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-muted/50"
             />
@@ -958,8 +958,14 @@ function UpiPayReturnScreen({ upiId, amount, recipientName, onDone, onBack }: Up
 function UpiDesktopInfo() {
   return (
     <div className="text-center py-6 space-y-4">
-      <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-blue-500/10">
-        <span className="text-3xl" aria-hidden="true">📱</span>
+      <div className="flex mx-auto items-center justify-center">
+        <NextImage
+          src="/Mobile-logo-for-upi.png"
+          alt="Pay via UPI mobile"
+          width={120}
+          height={120}
+          className="select-none"
+        />
       </div>
       <div className="space-y-1">
         <p className="text-sm font-bold text-foreground">Use your mobile to pay</p>
@@ -1043,10 +1049,6 @@ function PayViaUpiCard({ isMobile, onEnterUpiId, onScanQr }: PayViaUpiCardProps)
             )}
           </div>
 
-          {/* Right Vector Illustration */}
-          <div className="shrink-0 hidden sm:flex items-center justify-center">
-            <UpiMobileArt size={120} />
-          </div>
         </div>
       </div>
     </div>
@@ -1108,8 +1110,8 @@ function PayViaRazorpayCard({ onStartPayment }: PayViaRazorpayCardProps) {
                   🔒
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground truncate">256-bit SSL</p>
-                  <p className="text-[10px] text-muted truncate">HMAC Verified</p>
+                  <p className="text-xs font-bold text-foreground truncate"></p>
+                  <p className="text-[12px] text-muted truncate">HMAC Verified</p>
                 </div>
               </div>
             </div>
@@ -1176,10 +1178,8 @@ function RazorpayTransferForm({
 
   const validate = (): boolean => {
     const e: typeof errors = {};
-    if (!form.upiId.trim()) {
-      e.upiId = "Please enter recipient UPI ID.";
-    } else if (!validateUpiId(form.upiId)) {
-      e.upiId = "Enter a valid UPI ID (e.g. payee@okhdfcbank or rahul@upi)";
+    if (form.upiId.trim() && !validateUpiId(form.upiId)) {
+      e.upiId = "Enter a valid UPI ID (Enter UPI ID)";
     }
     const numAmount = parseFloat(form.amount);
     if (!form.amount.trim()) {
@@ -1238,13 +1238,16 @@ function RazorpayTransferForm({
 
       <Card className="p-5 sm:p-6 space-y-5 rounded-3xl">
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-          {/* Recipient UPI ID — MANDATORY */}
+          {/* Recipient UPI ID — OPTIONAL */}
           <div>
             <label
               htmlFor="rzp-upi"
               className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2"
             >
-              Recipient UPI ID <span className="text-red-500">*</span>
+              Recipient UPI ID{" "}
+              <span className="text-[10px] font-normal text-muted normal-case tracking-normal">
+                (optional)
+              </span>
             </label>
             <input
               id="rzp-upi"
@@ -1253,7 +1256,7 @@ function RazorpayTransferForm({
               inputMode="email"
               value={form.upiId}
               onChange={setField("upiId")}
-              placeholder="e.g. payee@okhdfcbank or rahul@upi"
+              placeholder="Enter UPI ID"
               autoComplete="off"
               disabled={isLoading}
               className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50 font-mono"
@@ -1282,7 +1285,7 @@ function RazorpayTransferForm({
               type="text"
               value={form.recipientName}
               onChange={setField("recipientName")}
-              placeholder="e.g. Rahul Sharma (optional)"
+              placeholder="Enter Name (optional)"
               autoComplete="off"
               disabled={isLoading}
               className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50"
@@ -1651,7 +1654,7 @@ function TransferForm({ initial, onReview, onCancel }: TransferFormProps) {
               type="text"
               value={form.upiId}
               onChange={setField("upiId")}
-              placeholder="e.g. rahul@demo"
+              placeholder="Enter UPI ID"
               autoComplete="off"
               className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50 font-mono"
               aria-describedby={errors.upiId ? "tf-upi-err" : undefined}
@@ -1673,7 +1676,7 @@ function TransferForm({ initial, onReview, onCancel }: TransferFormProps) {
               type="text"
               value={form.recipientName}
               onChange={setField("recipientName")}
-              placeholder="e.g. Rahul Sharma"
+              placeholder="Enter Name"
               autoComplete="off"
               className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50"
             />

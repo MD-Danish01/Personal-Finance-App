@@ -6,6 +6,7 @@ import { FinancialProfileCard } from "@/components/ui/FinancialProfileCard";
 import { ThemeSelectorCard } from "@/components/ui/ThemeSelectorCard";
 import { handleSignOut } from "./actions";
 import { ComingSoonButton } from "@/components/ui/ComingSoonDialog";
+import { SecurityPrivacyButton } from "@/components/ui/SecurityPrivacyButton";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -91,15 +92,7 @@ export default async function ProfilePage() {
               <Icon name="chevron-right" size={16} className="text-muted" />
             </div>
           </ComingSoonButton>
-          <ComingSoonButton>
-            <div className="flex w-full items-center justify-between gap-3 p-3 text-left text-foreground rounded-xl hover:bg-muted-bg transition-colors">
-              <div className="flex items-center gap-3">
-                <Icon name="shield" size={18} className="text-muted" />
-                <span className="text-sm font-medium">Security & Privacy</span>
-              </div>
-              <Icon name="chevron-right" size={16} className="text-muted" />
-            </div>
-          </ComingSoonButton>
+          <SecurityPrivacyButton userEmail={email} />
           <ComingSoonButton>
             <div className="flex w-full items-center justify-between gap-3 p-3 text-left text-foreground rounded-xl hover:bg-muted-bg transition-colors">
               <div className="flex items-center gap-3">

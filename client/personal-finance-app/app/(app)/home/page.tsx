@@ -19,20 +19,25 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [advisorOpen, setAdvisorOpen] = useState(false);
-  const [warningDismissed, setWarningDismissed] = useState(() => {
-    if (typeof window !== "undefined") {
+  // Start with false (safe SSR default), read sessionStorage after mount
+  const [warningDismissed, setWarningDismissed] = useState(false);
+
+  // Read sessionStorage after mount to avoid SSR hydration mismatch
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
       const todayStr = new Date().toISOString().slice(0, 10);
-      return sessionStorage.getItem(`overspend_dismissed_${todayStr}`) === "true";
-    }
-    return false;
-  });
+      if (sessionStorage.getItem(`overspend_dismissed_${todayStr}`) === "true") {
+        setWarningDismissed(true);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const handleDismissWarning = () => {
     setWarningDismissed(true);
-    if (typeof window !== "undefined") {
-      const todayStr = new Date().toISOString().slice(0, 10);
-      sessionStorage.setItem(`overspend_dismissed_${todayStr}`, "true");
-    }
+    const todayStr = new Date().toISOString().slice(0, 10);
+    sessionStorage.setItem(`overspend_dismissed_${todayStr}`, "true");
   };
 
   useEffect(() => {

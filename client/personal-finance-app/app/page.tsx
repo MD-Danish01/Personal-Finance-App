@@ -607,7 +607,7 @@ export default function Page() {
           <div className="landing-footer-main">
             <Link href="/" className="landing-logo">
               <Image
-                src="/favicon.ico"
+                src="/logo.png"
                 alt="SPENDLY"
                 width={36}
                 height={36}
@@ -623,15 +623,14 @@ export default function Page() {
               Understand your money. Plan your future.
             </p>
 
-            <Link href="/login" className="landing-footer-cta">
-              Get Started →
-            </Link>
+            
           </div>
-
+            
           <div className="landing-footer-bottom">
             <span>© 2026 Spendly. All rights reserved.</span>
 
             <div>
+            
              
             </div>
           </div>

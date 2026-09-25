@@ -122,30 +122,7 @@ jobs:
           command_timeout: 15m
           source: "release/*"
           target: "/tmp/pfa-release"
-          strip_components: 1
           overwrite: true
-
-      - name: Verify release arrived on EC2
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.AWS_EC2_HOST }}
-          username: ${{ secrets.AWS_EC2_USERNAME }}
-          key: ${{ secrets.AWS_EC2_SSH_KEY }}
-          port: 22
-          timeout: 60s
-          command_timeout: 5m
-          script: |
-            set -e
-
-            echo "=== Files received ==="
-            find /tmp/pfa-release -maxdepth 3 -type f -print -exec ls -lh {} \;
-
-            if [ ! -f "/tmp/pfa-release/personal-finance-app.tar.gz" ]; then
-              echo "ERROR: personal-finance-app.tar.gz was not found."
-              exit 1
-            fi
-
-            echo "Release artifact found successfully."
 
       - name: Install release and restart application
         uses: appleboy/ssh-action@v1.2.0
@@ -161,8 +138,14 @@ jobs:
             set -e
 
             export NVM_DIR="$HOME/.nvm"
+
             if [ -s "$NVM_DIR/nvm.sh" ]; then
               . "$NVM_DIR/nvm.sh"
+            fi
+
+            if command -v nvm >/dev/null 2>&1; then
+              nvm use 20 >/dev/null 2>&1 || nvm install 20
+              nvm use 20
             fi
 
             echo "=== Runtime versions ==="
@@ -174,7 +157,7 @@ jobs:
             APP_DIR="${APP_DIR:-/project/Personal-Finance-App}"
 
             APP_PATH="$APP_DIR/client/personal-finance-app"
-            RELEASE_DIR="/tmp/pfa-release/release"
+            RELEASE_DIR="/tmp/pfa-release"
 
             echo "=== Disk before deployment ==="
             df -h /
@@ -182,41 +165,73 @@ jobs:
             echo "=== Memory before deployment ==="
             free -h
 
-            # Make sure application directory exists.
+            # ---------------------------------------------------------------
+            # Find the artifact regardless of the directory structure created
+            # by appleboy/scp-action.
+            # ---------------------------------------------------------------
+
+            echo "=== Files received from GitHub ==="
+
+            find "$RELEASE_DIR" \
+              -maxdepth 5 \
+              -type f \
+              -print \
+              -exec ls -lh {} \; 2>/dev/null || true
+
+            RELEASE_FILE="$(find "$RELEASE_DIR" \
+              -maxdepth 5 \
+              -type f \
+              -name 'personal-finance-app.tar.gz' \
+              -print \
+              -quit)"
+
+            if [ -z "$RELEASE_FILE" ]; then
+              echo "ERROR: personal-finance-app.tar.gz was not found."
+              exit 1
+            fi
+
+            echo "=== Release artifact found ==="
+            echo "$RELEASE_FILE"
+            ls -lh "$RELEASE_FILE"
+
+            # ---------------------------------------------------------------
+            # Verify production .env exists.
+            # ---------------------------------------------------------------
+
+            if [ ! -f "$APP_PATH/.env" ]; then
+              echo "ERROR: Production .env does not exist:"
+              echo "$APP_PATH/.env"
+              exit 1
+            fi
+
+            # ---------------------------------------------------------------
+            # Prepare staging directory.
+            # ---------------------------------------------------------------
+
             sudo mkdir -p "$APP_PATH"
             sudo chown "$(whoami)":"$(whoami)" "$APP_PATH"
 
-            # IMPORTANT:
-            # Keep the server-side .env file.
-            if [ ! -f "$APP_PATH/.env" ]; then
-              echo "ERROR: $APP_PATH/.env does not exist."
-              echo "Create the production .env file before deploying."
-              exit 1
-            fi
-
-            # Make sure the artifact arrived.
-            if [ ! -f "$RELEASE_DIR/personal-finance-app.tar.gz" ]; then
-              echo "ERROR: Release artifact was not uploaded."
-              exit 1
-            fi
-
-            echo "=== Release artifact ==="
-            ls -lh "$RELEASE_DIR/personal-finance-app.tar.gz"
-
-            # Extract into a temporary directory first.
-            # This avoids replacing the current deployment with a
-            # partially extracted package.
             STAGING_DIR="$APP_PATH/.release-staging"
 
             rm -rf "$STAGING_DIR"
             mkdir -p "$STAGING_DIR"
 
-            tar -xzf "$RELEASE_DIR/personal-finance-app.tar.gz" \
+            # ---------------------------------------------------------------
+            # Extract standalone release.
+            # ---------------------------------------------------------------
+
+            tar -xzf "$RELEASE_FILE" \
               -C "$STAGING_DIR"
 
-            # Validate the standalone server before touching the live app.
+            echo "=== Extracted files ==="
+            find "$STAGING_DIR" -maxdepth 4 -type f | head -100
+
+            # ---------------------------------------------------------------
+            # Validate standalone build.
+            # ---------------------------------------------------------------
+
             if [ ! -f "$STAGING_DIR/.next/standalone/server.js" ]; then
-              echo "ERROR: standalone/server.js was not found."
+              echo "ERROR: .next/standalone/server.js was not found."
               exit 1
             fi
 
@@ -225,45 +240,50 @@ jobs:
               exit 1
             fi
 
+            if [ ! -d "$STAGING_DIR/public" ]; then
+              echo "ERROR: public directory was not found."
+              exit 1
+            fi
+
             echo "=== Standalone build validated ==="
 
-            # Stop/remove the OLD PM2 process.
-            # The old process was running `npm start`.
-            # The new process will run standalone/server.js directly.
+            # ---------------------------------------------------------------
+            # Stop current application.
+            # ---------------------------------------------------------------
+
             if command -v pm2 >/dev/null 2>&1; then
               pm2 delete personal-finance-app >/dev/null 2>&1 || true
             fi
 
-            # Remove old build output and old node_modules.
-            # node_modules is no longer required on the production server.
+            # ---------------------------------------------------------------
+            # Remove old application build/runtime files.
+            # Keep .env!
+            # ---------------------------------------------------------------
+
             rm -rf "$APP_PATH/.next"
             rm -rf "$APP_PATH/node_modules"
             rm -rf "$APP_PATH/public"
 
-            # Install the already-built production files.
+            # ---------------------------------------------------------------
+            # Install the new build.
+            # ---------------------------------------------------------------
+
             mv "$STAGING_DIR/.next" "$APP_PATH/.next"
             mv "$STAGING_DIR/public" "$APP_PATH/public"
 
             rm -rf "$STAGING_DIR"
+            rm -rf "$RELEASE_DIR"
 
-            # The server still keeps its production .env.
             cd "$APP_PATH"
 
-            echo "=== Starting standalone Next.js server ==="
+            # ---------------------------------------------------------------
+            # Start standalone Next.js server.
+            # ---------------------------------------------------------------
 
             export NODE_ENV=production
             export PORT=3000
             export HOSTNAME=0.0.0.0
 
-            if ! command -v pm2 >/dev/null 2>&1; then
-              echo "PM2 is not installed."
-              echo "Install PM2 once on the EC2 server."
-              exit 1
-            fi
-
-            # Node 20 supports --env-file.
-            # This loads the server-side .env without putting secrets
-            # into the GitHub artifact.
             pm2 start .next/standalone/server.js \
               --name personal-finance-app \
               --cwd "$APP_PATH" \
@@ -281,9 +301,6 @@ jobs:
 
             echo "=== Disk after deployment ==="
             df -h /
-
-            # Clean temporary uploaded artifact.
-            rm -rf "$RELEASE_DIR"
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.2.0

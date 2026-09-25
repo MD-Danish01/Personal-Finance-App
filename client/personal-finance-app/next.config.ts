@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   allowedDevOrigins: ["192.168.1.7"],
 
+  experimental: {
+    turbopackFileSystemCacheForBuild: false,
+  },
+
   images: {
     remotePatterns: [
       {
@@ -15,4 +19,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

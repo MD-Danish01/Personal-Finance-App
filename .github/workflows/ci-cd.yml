@@ -122,6 +122,7 @@ jobs:
           command_timeout: 15m
           source: "release/*"
           target: "/tmp/pfa-release"
+          strip_components: 1
           overwrite: true
 
       - name: Verify release arrived on EC2
@@ -173,7 +174,7 @@ jobs:
             APP_DIR="${APP_DIR:-/project/Personal-Finance-App}"
 
             APP_PATH="$APP_DIR/client/personal-finance-app"
-            RELEASE_DIR="/tmp/pfa-release"
+            RELEASE_DIR="/tmp/pfa-release/release"
 
             echo "=== Disk before deployment ==="
             df -h /

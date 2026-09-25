@@ -168,6 +168,12 @@ jobs:
             cd client/personal-finance-app
             npm ci --include=dev
 
+            # Kill any stray next build processes left over from a crashed previous build
+            pkill -9 -f "next build" 2>/dev/null || true
+            pkill -9 -f "next-server" 2>/dev/null || true
+            sleep 1
+            rm -rf .next
+
             # Allocate memory limit for Node.js build process
             export NODE_OPTIONS="--max-old-space-size=1536"
             npm run build

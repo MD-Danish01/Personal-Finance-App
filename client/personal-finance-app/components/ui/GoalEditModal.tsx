@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/client";
+import { getGoalCapacity } from "@/lib/api";
 import { Icon } from "@/components/ui/Icon";
-import type { Goal } from "@/lib/types";
+import { formatINR } from "@/lib/format";
+import type { Goal, GoalCapacityInfo } from "@/lib/types";
 
 const GOAL_ICONS = ["💻", "🌴", "🛡️", "🚗", "🏠", "💍", "🎓", "✈️", "🎯", "📱", "💼", "🏋️"];
 
@@ -53,6 +55,32 @@ function GoalEditContent({
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [capacity, setCapacity] = useState<GoalCapacityInfo | null>(null);
+
+  useEffect(() => {
+    getGoalCapacity()
+      .then((cap) => setCapacity(cap))
+      .catch((err) => console.error("Failed to fetch goal capacity in edit modal:", err));
+  }, []);
+
+  const currentGoalMonthlyRupees = Math.round((goal.monthlyTarget || 0) / 100);
+  const enteredMonthly = parseFloat(monthlyTarget) || 0;
+
+  // Available capacity for THIS goal = existing remaining + this goal's current allocation
+  const availableForThisGoalRupees =
+    capacity && capacity.hasIncome
+      ? capacity.remainingMonthlyCapacityRupees + currentGoalMonthlyRupees
+      : 0;
+
+  const isOverSafeCapacity =
+    capacity &&
+    capacity.hasIncome &&
+    enteredMonthly > availableForThisGoalRupees;
+
+  const exceedsTargetAmount =
+    parseFloat(targetAmount) > 0 &&
+    enteredMonthly > parseFloat(targetAmount);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -67,6 +95,20 @@ function GoalEditContent({
       return;
     }
 
+    if (isOverSafeCapacity) {
+      setError(
+        `Monthly allocation exceeds your safe savings capacity (₹${availableForThisGoalRupees.toLocaleString(
+          "en-IN",
+        )} available for this goal). Reduce the monthly amount to protect your living expenses.`,
+      );
+      return;
+    }
+
+    if (exceedsTargetAmount) {
+      setError("Monthly target cannot be greater than the goal's total target amount.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -76,13 +118,16 @@ function GoalEditContent({
         icon,
         targetAmount: Math.round(numTarget * 100),
         deadline: deadline || null,
-        monthlyTarget: monthlyTarget ? Math.round(parseFloat(monthlyTarget) * 100) : 0,
+        monthlyTarget: enteredMonthly > 0 ? Math.round(enteredMonthly * 100) : 0,
       });
 
       onUpdated();
       onClose();
-    } catch {
-      setError("Failed to update goal. Try again.");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Failed to update goal. Try again.";
+      setError(msg);
     } finally {
       setSaving(false);
     }
@@ -105,7 +150,7 @@ function GoalEditContent({
 
   return (
     <div
-      className="w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-card-border p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+      className="w-full max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-card-border p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
       role="dialog"
     >
@@ -128,6 +173,15 @@ function GoalEditContent({
           <Icon name="x" size={18} />
         </button>
       </div>
+
+      {capacity && capacity.hasIncome && (
+        <div className="rounded-xl bg-muted-bg border border-card-border p-3 text-xs flex justify-between items-center">
+          <span className="text-muted">Safe Capacity For This Goal:</span>
+          <span className="font-bold text-primary font-mono">
+            {formatINR(availableForThisGoalRupees)}/mo
+          </span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -192,10 +246,20 @@ function GoalEditContent({
               value={monthlyTarget}
               onChange={(e) => setMonthlyTarget(e.target.value)}
               placeholder="5000"
-              className="w-full rounded-xl border border-card-border bg-muted-bg px-3.5 py-2.5 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
+              className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-bold text-foreground outline-none focus:ring-2 font-mono transition-colors ${
+                isOverSafeCapacity
+                  ? "border-red-500 bg-red-500/10 focus:ring-red-500"
+                  : "border-card-border bg-muted-bg focus:ring-primary"
+              }`}
             />
           </div>
         </div>
+
+        {isOverSafeCapacity && (
+          <div className="rounded-xl bg-red-500/10 border border-red-500/25 p-2.5 text-xs text-red-600 dark:text-red-400 font-medium">
+            ⚠️ <strong>Limit Exceeded:</strong> {formatINR(enteredMonthly)}/mo exceeds safe capacity of {formatINR(availableForThisGoalRupees)}/mo. Reduce monthly target to protect daily living spend.
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1">
@@ -214,7 +278,7 @@ function GoalEditContent({
         <div className="flex gap-2.5 pt-1">
           <button
             type="submit"
-            disabled={saving || deleting}
+            disabled={saving || deleting || isOverSafeCapacity || exceedsTargetAmount}
             className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 disabled:opacity-50 transition-opacity cursor-pointer shadow-xs"
           >
             {saving ? "Saving Changes..." : "Save Changes"}

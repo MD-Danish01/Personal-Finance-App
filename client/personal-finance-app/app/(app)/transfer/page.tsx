@@ -12,6 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useSession } from "next-auth/react";
+import NextImage from "next/image";
 import { Icon } from "@/components/ui/Icon";
 import { Card } from "@/components/ui/Card";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -19,7 +20,6 @@ import { formatINR } from "@/lib/format";
 import type { Category } from "@/lib/types";
 import {
   RazorpayGatewayHeroArt,
-  UpiMobileArt,
   TransferSuccessArt,
   EmptyTransfersArt,
   SecurityShieldArt,
@@ -233,15 +233,6 @@ function buildUpiUri(upiId: string, amount: number, recipientName?: string, note
 // ─────────────────────────────────────────────────────────────────────────────
 // Small UI helpers (no state)
 // ─────────────────────────────────────────────────────────────────────────────
-
-function DemoTag() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
-      <Icon name="shield" size={10} />
-      DEMO
-    </span>
-  );
-}
 
 function DisclaimerBanner({ text = DEMO_DISCLAIMER }: { text?: string }) {
   return (
@@ -515,7 +506,6 @@ function QRScanner({ onScanned, onClose }: QRScannerProps) {
             <Icon name="qr-code" size={16} />
           </div>
           <h2 className="text-base font-bold text-foreground">Scan QR</h2>
-          <DemoTag />
         </div>
         <button
           type="button"
@@ -625,7 +615,7 @@ function QRScanner({ onScanned, onClose }: QRScannerProps) {
                   type="text"
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
-                  placeholder="e.g. Rahul Sharma"
+                  placeholder=" Enter Name"
                   className="w-full px-3 py-2 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -638,7 +628,7 @@ function QRScanner({ onScanned, onClose }: QRScannerProps) {
                   type="text"
                   value={manualUpi}
                   onChange={(e) => { setManualUpi(e.target.value); setManualError(""); }}
-                  placeholder="e.g. rahul@demo"
+                  placeholder="Enter UPI ID"
                   required
                   className="w-full px-3 py-2 rounded-xl bg-muted-bg border border-card-border text-xs text-foreground outline-none focus:ring-2 focus:ring-primary font-mono"
                   aria-describedby={manualError ? "qr-upi-err" : undefined}
@@ -721,7 +711,7 @@ function UpiPayForm({ initial, onPay, onCancel }: UpiPayFormProps) {
     if (!form.upiId.trim()) {
       e.upiId = "Please enter a UPI ID.";
     } else if (!validateUpiId(form.upiId)) {
-      e.upiId = "Enter a valid UPI ID (e.g. rahul@upi)";
+      e.upiId = "Enter a valid UPI ID (Enter UPI ID)";
     }
     const num = parseFloat(form.amount);
     if (!form.amount.trim()) {
@@ -774,7 +764,7 @@ function UpiPayForm({ initial, onPay, onCancel }: UpiPayFormProps) {
               inputMode="email"
               value={form.upiId}
               onChange={setF("upiId")}
-              placeholder="e.g. rahul@upi"
+              placeholder="Enter UPI ID"
               autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-muted/50 font-mono"
               aria-describedby={errors.upiId ? "upif-upi-err" : undefined}
@@ -831,7 +821,7 @@ function UpiPayForm({ initial, onPay, onCancel }: UpiPayFormProps) {
               type="text"
               value={form.recipientName}
               onChange={setF("recipientName")}
-              placeholder="e.g. Rahul Sharma"
+              placeholder="Enter Name"
               autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-muted/50"
             />
@@ -968,8 +958,14 @@ function UpiPayReturnScreen({ upiId, amount, recipientName, onDone, onBack }: Up
 function UpiDesktopInfo() {
   return (
     <div className="text-center py-6 space-y-4">
-      <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-blue-500/10">
-        <span className="text-3xl" aria-hidden="true">📱</span>
+      <div className="flex mx-auto items-center justify-center">
+        <NextImage
+          src="/Mobile-logo-for-upi.png"
+          alt="Pay via UPI mobile"
+          width={120}
+          height={120}
+          className="select-none"
+        />
       </div>
       <div className="space-y-1">
         <p className="text-sm font-bold text-foreground">Use your mobile to pay</p>
@@ -1053,10 +1049,6 @@ function PayViaUpiCard({ isMobile, onEnterUpiId, onScanQr }: PayViaUpiCardProps)
             )}
           </div>
 
-          {/* Right Vector Illustration */}
-          <div className="shrink-0 hidden sm:flex items-center justify-center">
-            <UpiMobileArt size={120} />
-          </div>
         </div>
       </div>
     </div>
@@ -1118,8 +1110,8 @@ function PayViaRazorpayCard({ onStartPayment }: PayViaRazorpayCardProps) {
                   🔒
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground truncate">256-bit SSL</p>
-                  <p className="text-[10px] text-muted truncate">HMAC Verified</p>
+                  <p className="text-xs font-bold text-foreground truncate"></p>
+                  <p className="text-[12px] text-muted truncate">HMAC Verified</p>
                 </div>
               </div>
             </div>
@@ -1186,10 +1178,8 @@ function RazorpayTransferForm({
 
   const validate = (): boolean => {
     const e: typeof errors = {};
-    if (!form.upiId.trim()) {
-      e.upiId = "Please enter recipient UPI ID.";
-    } else if (!validateUpiId(form.upiId)) {
-      e.upiId = "Enter a valid UPI ID (e.g. payee@okhdfcbank or rahul@upi)";
+    if (form.upiId.trim() && !validateUpiId(form.upiId)) {
+      e.upiId = "Enter a valid UPI ID (Enter UPI ID)";
     }
     const numAmount = parseFloat(form.amount);
     if (!form.amount.trim()) {
@@ -1248,13 +1238,16 @@ function RazorpayTransferForm({
 
       <Card className="p-5 sm:p-6 space-y-5 rounded-3xl">
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-          {/* Recipient UPI ID — MANDATORY */}
+          {/* Recipient UPI ID — OPTIONAL */}
           <div>
             <label
               htmlFor="rzp-upi"
               className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2"
             >
-              Recipient UPI ID <span className="text-red-500">*</span>
+              Recipient UPI ID{" "}
+              <span className="text-[10px] font-normal text-muted normal-case tracking-normal">
+                (optional)
+              </span>
             </label>
             <input
               id="rzp-upi"
@@ -1263,7 +1256,7 @@ function RazorpayTransferForm({
               inputMode="email"
               value={form.upiId}
               onChange={setField("upiId")}
-              placeholder="e.g. payee@okhdfcbank or rahul@upi"
+              placeholder="Enter UPI ID"
               autoComplete="off"
               disabled={isLoading}
               className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50 font-mono"
@@ -1292,7 +1285,7 @@ function RazorpayTransferForm({
               type="text"
               value={form.recipientName}
               onChange={setField("recipientName")}
-              placeholder="e.g. Rahul Sharma (optional)"
+              placeholder="Enter Name (optional)"
               autoComplete="off"
               disabled={isLoading}
               className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-muted/50"
@@ -1645,10 +1638,6 @@ function TransferForm({ initial, onReview, onCancel }: TransferFormProps) {
           <h2 className="text-lg font-bold text-foreground">Send Money (Demo)</h2>
           <p className="text-xs text-muted">Simulate a transfer without real money</p>
         </div>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-          <Icon name="shield" size={11} />
-          DEMO MODE
-        </span>
       </div>
 
       <DisclaimerBanner />
@@ -1665,7 +1654,7 @@ function TransferForm({ initial, onReview, onCancel }: TransferFormProps) {
               type="text"
               value={form.upiId}
               onChange={setField("upiId")}
-              placeholder="e.g. rahul@demo"
+              placeholder="Enter UPI ID"
               autoComplete="off"
               className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50 font-mono"
               aria-describedby={errors.upiId ? "tf-upi-err" : undefined}
@@ -1687,7 +1676,7 @@ function TransferForm({ initial, onReview, onCancel }: TransferFormProps) {
               type="text"
               value={form.recipientName}
               onChange={setField("recipientName")}
-              placeholder="e.g. Rahul Sharma"
+              placeholder="Enter Name"
               autoComplete="off"
               className="w-full px-4 py-3 rounded-2xl bg-muted-bg border border-card-border text-sm text-foreground focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-muted/50"
             />
@@ -1952,8 +1941,6 @@ function SuccessScreen({ transfer, onDone, onViewHistory }: SuccessScreenProps) 
           </div>
         ))}
       </Card>
-
-      <DisclaimerBanner text="Demo transaction — no real money was transferred." />
 
       <div className="flex gap-3">
         <button
@@ -2354,7 +2341,6 @@ export default function TransferPage() {
               <p className="mt-0.5 text-xs text-muted">Send money securely with Spendly</p>
             </div>
             <div className="flex items-center gap-2">
-              <DemoTag />
               <UserAvatar />
             </div>
           </header>
@@ -2383,63 +2369,8 @@ export default function TransferPage() {
             />
           </div>
 
-          {/* OR divider */}
-          <div className="dashboard-enter flex items-center gap-3" style={{ animationDelay: "180ms" }}>
-            <div className="flex-1 h-px bg-card-border" />
-            <span className="text-[11px] font-bold text-muted uppercase tracking-wider">or demo mode</span>
-            <div className="flex-1 h-px bg-card-border" />
-          </div>
-
-          {/* ── Demo section (below) ── */}
-          {/* Demo action cards */}
-          <div className="dashboard-enter grid grid-cols-2 gap-3" style={{ animationDelay: "240ms" }}>
-            <button
-              type="button"
-              onClick={() => setStep("form")}
-              className="group flex flex-col items-center gap-3 rounded-2xl border border-card-border bg-card p-5 shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md cursor-pointer"
-              aria-label="Open Send Money form"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary transition-transform group-hover:scale-105">
-                <Icon name="send" size={22} />
-              </span>
-              <span className="text-sm font-bold text-foreground">Send Money</span>
-              <span className="text-[11px] text-muted text-center leading-tight">Transfer via demo UPI</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setQrOrigin("demo"); setStep("qr-scanner"); }}
-              className="group flex flex-col items-center gap-3 rounded-2xl border border-card-border bg-card p-5 shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md cursor-pointer"
-              aria-label="Open QR scanner for demo transfer"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary transition-transform group-hover:scale-105">
-                <Icon name="qr-code" size={22} />
-              </span>
-              <span className="text-sm font-bold text-foreground">Scan QR</span>
-              <span className="text-[11px] text-muted text-center leading-tight">Scan a demo UPI QR</span>
-            </button>
-          </div>
-
-          {/* Show Demo QR */}
-          <div className="dashboard-enter" style={{ animationDelay: "300ms" }}>
-            <button
-              type="button"
-              onClick={() => setShowQRGen(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-card-border bg-muted-bg py-3 text-xs font-semibold text-muted hover:text-foreground hover:border-primary/40 transition-colors cursor-pointer"
-              aria-label="Show my demo QR code"
-            >
-              <Icon name="qr-code" size={14} />
-              Show My Demo QR
-            </button>
-          </div>
-
-          {/* Disclaimer */}
-          <div className="dashboard-enter" style={{ animationDelay: "360ms" }}>
-            <DisclaimerBanner />
-          </div>
-
           {/* Recent transfers */}
-          <div className="dashboard-enter" style={{ animationDelay: "440ms" }}>
+          <div className="dashboard-enter" style={{ animationDelay: "240ms" }}>
             <RecentTransfers transfers={transfers} />
           </div>
         </div>

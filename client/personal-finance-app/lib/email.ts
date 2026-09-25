@@ -145,6 +145,89 @@ export interface OverspendingAlertEmailParams {
   baseUrl?: string;
 }
 
+export interface MonthlyReportEmailParams {
+  to: string;
+  name: string;
+  monthLabel: string;
+  budget: number;
+  spent: number;
+  remaining: number;
+  categoryBreakdown: Array<{ category: string; amount: number }>;
+  dashboardUrl?: string;
+}
+
+export async function sendMonthlyReportEmail({
+  to,
+  name,
+  monthLabel,
+  budget,
+  spent,
+  remaining,
+  categoryBreakdown,
+  dashboardUrl,
+}: MonthlyReportEmailParams): Promise<{ success: boolean; error?: string }> {
+  const origin =
+    process.env.EMAIL_APP_URL ||
+    (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")
+      ? process.env.NEXT_PUBLIC_APP_URL
+      : "https://devforge.danishdev.me");
+  const reportUrl = dashboardUrl ?? `${origin.replace(/\/$/, "")}/home`;
+  const rows = categoryBreakdown
+    .map(
+      ({ category, amount }) =>
+        `<tr><td style="padding:6px 0;color:#94a3b8;font-size:13px;">${category}</td><td style="padding:6px 0;text-align:right;color:#f3f4f6;font-size:13px;font-weight:700;font-family:monospace;">₹${amount.toLocaleString("en-IN")}</td></tr>`,
+    )
+    .join("");
+  const textBreakdown = categoryBreakdown
+    .map(({ category, amount }) => `• ${category}: ₹${amount.toLocaleString("en-IN")}`)
+    .join("\n");
+
+  const html = `
+<html><body style="font-family:Arial,sans-serif;background:#0c0e12;color:#f3f4f6;padding:40px 20px;">
+  <div style="max-width:540px;margin:0 auto;background:#161a22;border:1px solid #232836;border-radius:24px;padding:36px 32px;">
+    <div style="color:#10b981;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Spendly Personal Finance</div>
+    <h1 style="font-size:22px;color:#fff;margin:22px 0 12px;">Your monthly report</h1>
+    <p style="font-size:14px;line-height:22px;color:#94a3b8;">Hi ${name || "there"}, here is your spending summary for <strong>${monthLabel}</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:24px 0;background:#0c0e12;border:1px solid #232836;border-radius:16px;padding:12px;">
+      <tr><td style="padding:8px 0;color:#94a3b8;">Monthly budget</td><td style="padding:8px 0;text-align:right;font-weight:700;">₹${budget.toLocaleString("en-IN")}</td></tr>
+      <tr><td style="padding:8px 0;color:#94a3b8;">Total spent</td><td style="padding:8px 0;text-align:right;font-weight:700;">₹${spent.toLocaleString("en-IN")}</td></tr>
+      <tr><td style="padding:8px 0;color:#10b981;">Remaining</td><td style="padding:8px 0;text-align:right;color:#10b981;font-weight:800;">₹${remaining.toLocaleString("en-IN")}</td></tr>
+    </table>
+    <h2 style="font-size:14px;color:#fff;margin:24px 0 8px;">Spending by category</h2>
+    <table style="width:100%;border-collapse:collapse;">${rows || `<tr><td style="padding:6px 0;color:#94a3b8;">No expenses recorded</td></tr>`}</table>
+    <div style="text-align:center;margin:30px 0 10px;"><a href="${reportUrl}" style="background:#10b981;color:#fff;text-decoration:none;padding:14px 28px;border-radius:14px;font-weight:700;font-size:14px;">View Dashboard</a></div>
+    <p style="font-size:11px;color:#6b7280;text-align:center;border-top:1px solid #232836;padding-top:16px;">Automated monthly report for ${to}.</p>
+  </div>
+</body></html>`.trim();
+  const text = `Spendly Personal Finance\n\nMonthly report for ${monthLabel}\n\nHi ${name || "there"},\n\n• Monthly budget: ₹${budget.toLocaleString("en-IN")}\n• Total spent: ₹${spent.toLocaleString("en-IN")}\n• Remaining: ₹${remaining.toLocaleString("en-IN")}\n\nSpending by category:\n${textBreakdown || "No expenses recorded."}\n\nView your dashboard: ${reportUrl}`;
+
+  if (!resend) {
+    console.log(`[Resend (Dev Mode)]: Monthly report prepared for ${to} (${monthLabel})`);
+    return { success: true };
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: getSenderAddress("Spendly"),
+      to: [to],
+      subject: `Your ${monthLabel} spending report - Spendly`,
+      html,
+      text,
+      replyTo: "noreply@devforge.danishdev.me",
+      headers: { "X-Entity-Ref-ID": crypto.randomUUID() },
+    });
+    if (error) {
+      console.error("[Resend Error - Monthly Report]:", error);
+      return { success: false, error: error.message };
+    }
+    console.log(`[Resend Success]: Monthly report sent to ${to}, ID: ${data?.id}`);
+    return { success: true };
+  } catch (err) {
+    console.error("[Resend Exception - Monthly Report]:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Failed to send monthly report" };
+  }
+}
+
 export async function sendOverspendingAlertEmail({
   to,
   name,
@@ -291,5 +374,85 @@ ${dashboardUrl}
   } catch (err) {
     console.error("[Resend Exception - Overspend Alert]:", err);
     return { success: false, error: err instanceof Error ? err.message : "Failed to send overspending alert" };
+  }
+}
+
+export interface PasswordChangeOtpEmailParams {
+  to: string;
+  name: string;
+  otp: string;
+}
+
+export async function sendPasswordChangeOtpEmail({
+  to,
+  name,
+  otp,
+}: PasswordChangeOtpEmailParams): Promise<{ success: boolean; error?: string }> {
+  const html = `
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Change your password - Spendly</title>
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#0c0e12;color:#f3f4f6;margin:0;padding:40px 20px;">
+  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;max-width:0;opacity:0;">
+    Your Spendly password change OTP: ${otp} — valid for 10 minutes.
+  </div>
+  <div style="max-width:540px;margin:0 auto;background-color:#161a22;border:1px solid #232836;border-radius:24px;padding:36px 32px;box-shadow:0 10px 25px rgba(0,0,0,0.4);">
+    <div style="margin-bottom:24px;">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:4px 10px;border-radius:999px;">
+        Spendly · Security
+      </span>
+    </div>
+    <h1 style="font-size:22px;font-weight:800;color:#ffffff;margin:0 0 12px 0;letter-spacing:-0.5px;">
+      Password change request
+    </h1>
+    <p style="font-size:14px;line-height:22px;color:#9ca3af;margin:0 0 28px 0;">
+      Hi ${name || "there"},<br><br>
+      We received a request to change the password on your Spendly account. Use the verification code below to proceed. This code expires in <strong style="color:#f3f4f6;">10 minutes</strong>.
+    </p>
+    <div style="text-align:center;margin:0 0 28px 0;">
+      <div style="display:inline-block;background-color:#0c0e12;border:2px solid #10b981;border-radius:18px;padding:20px 40px;">
+        <span style="font-size:36px;font-weight:900;letter-spacing:10px;color:#10b981;font-family:monospace;">${otp}</span>
+      </div>
+    </div>
+    <p style="font-size:12px;line-height:18px;color:#6b7280;margin:0 0 8px 0;">
+      If you did not request a password change, you can safely ignore this email. Your password will not be changed.
+    </p>
+    <p style="font-size:11px;color:#6b7280;margin:24px 0 0 0;border-top:1px solid #232836;padding-top:16px;">
+      This OTP was requested for <strong>${to}</strong>. Do not share it with anyone.
+    </p>
+  </div>
+</body>
+</html>`.trim();
+
+  const text = `Spendly · Password Change Request\n\nHi ${name || "there"},\n\nYour OTP to change your password is: ${otp}\n\nThis code expires in 10 minutes. If you did not request this, ignore this email.\n\nDo not share this code with anyone.`;
+
+  if (!resend) {
+    console.log(`[Resend (Dev Mode)]: Password change OTP for ${to}: ${otp}`);
+    return { success: true };
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: getSenderAddress("Spendly Security"),
+      to: [to],
+      subject: `${otp} is your Spendly password change code`,
+      html,
+      text,
+      replyTo: "noreply@devforge.danishdev.me",
+      headers: { "X-Entity-Ref-ID": crypto.randomUUID() },
+    });
+    if (error) {
+      console.error("[Resend Error - Password OTP]:", error);
+      return { success: false, error: error.message };
+    }
+    console.log(`[Resend Success]: Password OTP sent to ${to}, ID: ${data?.id}`);
+    return { success: true };
+  } catch (err) {
+    console.error("[Resend Exception - Password OTP]:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Failed to send OTP email" };
   }
 }

@@ -39,20 +39,10 @@ const STORAGE_COLOR_KEY = "pfa_theme_color";
 const STORAGE_MODE_KEY = "pfa_theme_mode";
 const STORAGE_ICON_SIZE_KEY = "pfa_icon_size";
 
-function getInitialColor(): ThemeColor {
-  if (typeof window === "undefined") return "emerald";
-  return (localStorage.getItem(STORAGE_COLOR_KEY) as ThemeColor) || "emerald";
-}
-
-function getInitialMode(): ThemeMode {
-  if (typeof window === "undefined") return "system";
-  return (localStorage.getItem(STORAGE_MODE_KEY) as ThemeMode) || "system";
-}
-
-function getInitialIconSize(): IconSizeScale {
-  if (typeof window === "undefined") return "medium";
-  return (localStorage.getItem(STORAGE_ICON_SIZE_KEY) as IconSizeScale) || "medium";
-}
+// Safe server-side defaults — localStorage is read in useEffect after mount
+const DEFAULT_COLOR: ThemeColor = "emerald";
+const DEFAULT_MODE: ThemeMode = "system";
+const DEFAULT_ICON_SIZE: IconSizeScale = "medium";
 
 const SCALE_MAP: Record<IconSizeScale, number> = {
   small: 0.85,
@@ -61,10 +51,11 @@ const SCALE_MAP: Record<IconSizeScale, number> = {
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeColor, setThemeColorState] = useState<ThemeColor>(getInitialColor);
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(getInitialMode);
-  const [iconSize, setIconSizeState] = useState<IconSizeScale>(getInitialIconSize);
+  const [themeColor, setThemeColorState] = useState<ThemeColor>(DEFAULT_COLOR);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(DEFAULT_MODE);
+  const [iconSize, setIconSizeState] = useState<IconSizeScale>(DEFAULT_ICON_SIZE);
   const [isSaving, setIsSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const iconScale = SCALE_MAP[iconSize] ?? 1.0;
 
@@ -105,8 +96,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Initial load: sync with DB and listen for system color changes
+  // On mount: read localStorage first, then sync from DB
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const storedColor = (localStorage.getItem(STORAGE_COLOR_KEY) as ThemeColor) || DEFAULT_COLOR;
+      const storedMode = (localStorage.getItem(STORAGE_MODE_KEY) as ThemeMode) || DEFAULT_MODE;
+      const storedIconSize = (localStorage.getItem(STORAGE_ICON_SIZE_KEY) as IconSizeScale) || DEFAULT_ICON_SIZE;
+      setThemeColorState(storedColor);
+      setThemeModeState(storedMode);
+      setIconSizeState(storedIconSize);
+      applyDomTheme(storedColor, storedMode, storedIconSize);
+      setMounted(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync with DB and listen for system color changes
+  useEffect(() => {
+    if (!mounted) return;
     let ignore = false;
 
     // Apply active theme to DOM immediately without calling setState
@@ -153,7 +162,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       ignore = true;
       mediaQuery.removeEventListener("change", handleChange);
     };
-  }, [applyDomTheme, themeColor, themeMode, iconSize]);
+  }, [applyDomTheme, mounted, themeColor, themeMode, iconSize]);
 
   // Persist theme changes
   const saveToBackend = useCallback(async (color: ThemeColor, mode: ThemeMode) => {

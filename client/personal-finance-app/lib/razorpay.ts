@@ -73,6 +73,34 @@ export async function createRazorpayOrder({
   return data as RazorpayOrderResponse;
 }
 
+export async function getRazorpayOrder(
+  orderId: string,
+): Promise<RazorpayOrderResponse> {
+  const keyId = RAZORPAY_KEY_ID;
+  const keySecret = RAZORPAY_KEY_SECRET;
+
+  if (!keyId || !keySecret) {
+    throw new Error(
+      "Razorpay credentials are not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+    );
+  }
+
+  const authHeader = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const response = await fetch(
+    `https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}`,
+    {
+      headers: { Authorization: `Basic ${authHeader}` },
+    },
+  );
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.error?.description || "Failed to fetch Razorpay order");
+  }
+
+  return data as RazorpayOrderResponse;
+}
+
 export interface VerifySignatureParams {
   orderId: string;
   paymentId: string;

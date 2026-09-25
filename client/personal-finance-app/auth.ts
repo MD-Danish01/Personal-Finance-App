@@ -21,6 +21,17 @@ export class InvalidCredentialsError extends CredentialsSignin {
   code = "INVALID_CREDENTIALS";
 }
 
+const authSecret =
+  process.env.AUTH_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  "spendly_default_auth_secret_must_be_32_chars_or_more";
+
+if (!process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
+  console.warn(
+    "[auth] Warning: AUTH_SECRET (or NEXTAUTH_SECRET) not set. Using fallback secret for build/dev.",
+  );
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
     usersTable: authUsers,
@@ -30,10 +41,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }),
   session: { strategy: "jwt" },
   trustHost: true,
-  secret:
-    process.env.AUTH_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    "personal-finance-secure-auth-jwt-secret-2026",
+  secret: authSecret,
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID,

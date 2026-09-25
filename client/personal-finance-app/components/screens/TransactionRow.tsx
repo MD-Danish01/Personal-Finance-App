@@ -54,7 +54,7 @@ export function TransactionRow({
             type="button"
             onClick={onEdit}
             aria-label="Edit transaction"
-            className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-muted-bg hover:text-primary transition-all cursor-pointer"
+            className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary opacity-100 transition-all cursor-pointer focus:opacity-100 hover:bg-primary/20 md:bg-transparent md:text-muted md:opacity-0 md:group-hover:opacity-100 md:hover:bg-muted-bg md:hover:text-primary"
           >
             <Icon name="pencil" size={14} />
           </button>

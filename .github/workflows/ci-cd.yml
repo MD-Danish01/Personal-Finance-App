@@ -67,6 +67,8 @@ jobs:
           username: ${{ secrets.AWS_EC2_USERNAME }}
           key: ${{ secrets.AWS_EC2_SSH_KEY }}
           port: 22
+          timeout: 60s
+          command_timeout: 30m
           script: |
             set -e
 
@@ -78,30 +80,64 @@ jobs:
             APP_DIR="${{ secrets.EC2_APP_DIR }}"
             APP_DIR="${APP_DIR:-/project/Personal-Finance-App}"
 
-            # ── Free up disk space ────────────────────────────────────────
-            # ONLY removes node_modules and .next build output — never
-            # touches .env files or any other project code.
+            # ── Free up disk space deeply before build ───────────────────
             echo "=== Disk usage before cleanup ==="
             df -h / || true
 
-            # Remove npm global cache
-            npm cache clean --force 2>/dev/null || true
+            # 1. Flush PM2 logs to recover disk space from accumulated logs
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 flush || true
+            fi
+            rm -rf "$HOME/.pm2/logs"/* 2>/dev/null || true
 
-            # Remove only the Next.js build output and node_modules.
-            # These are safe to delete: npm ci + npm run build recreate them.
-            # .env files, config files, and all other source files are untouched.
+            # 2. Clean npm cache, user caches, and temp directories
+            npm cache clean --force 2>/dev/null || true
+            rm -rf "$HOME/.cache" "$HOME/.npm" /tmp/* /var/tmp/* 2>/dev/null || true
+
+            # 3. Remove Next.js build output and node_modules
             rm -rf "$APP_DIR/client/personal-finance-app/node_modules"
             rm -rf "$APP_DIR/client/personal-finance-app/.next"
 
-            # Remove Docker stopped containers and dangling images if Docker is present
+            # 4. Remove Docker stopped containers, unused images and build cache if Docker exists
             if command -v docker >/dev/null 2>&1; then
-              docker system prune -f 2>/dev/null || true
+              docker system prune -a --volumes -f 2>/dev/null || true
             fi
 
-            # Remove system package caches
+            # 5. Clean apt cache, remove old unused kernels and dependencies (frees 1-2 GB)
             sudo apt-get clean 2>/dev/null || true
+            sudo apt-get autoremove --purge -y 2>/dev/null || true
             sudo rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
-            sudo journalctl --vacuum-size=50M 2>/dev/null || true
+
+            # 6. Clean system logs & old rotated logs
+            sudo journalctl --vacuum-time=1d --vacuum-size=20M 2>/dev/null || true
+            sudo rm -rf /var/log/*.gz /var/log/*.[0-9] /var/log/*.old /var/log/syslog* 2>/dev/null || true
+
+            # 7. Check swap: On a 6.7GB disk, 1GB swap is ideal (2GB eats too much disk)
+            SWAP_SIZE_MB=$(free -m | awk '/^Swap:/{print $2}')
+            if [ "$SWAP_SIZE_MB" -gt 1500 ]; then
+              echo "Reclaiming disk space by downsizing swap from 2GB to 1GB..."
+              sudo swapoff /swapfile 2>/dev/null || true
+              sudo rm -f /swapfile 2>/dev/null || true
+              sudo fallocate -l 1G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024 2>/dev/null || true
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile 2>/dev/null || true
+              sudo swapon /swapfile 2>/dev/null || true
+            elif [ "$SWAP_SIZE_MB" -eq 0 ]; then
+              sudo fallocate -l 1G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024 2>/dev/null || true
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile 2>/dev/null || true
+              sudo swapon /swapfile 2>/dev/null || true
+              grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null 2>&1 || true
+            fi
+
+            # 8. Auto-expand filesystem if EBS volume was resized in AWS Console
+            ROOT_DISK=$(df / | tail -1 | awk '{print $1}')
+            ROOT_DEV=$(echo "$ROOT_DISK" | sed -E 's/[0-9]+$//; s/p[0-9]+$//')
+            PART_NUM=$(echo "$ROOT_DISK" | grep -o '[0-9]*$')
+            if [ -n "$ROOT_DEV" ] && [ -n "$PART_NUM" ]; then
+              sudo growpart "$ROOT_DEV" "$PART_NUM" 2>/dev/null || true
+              sudo resize2fs "$ROOT_DISK" 2>/dev/null || sudo xfs_growfs / 2>/dev/null || true
+            fi
 
             echo "=== Disk usage after cleanup ==="
             df -h / || true
@@ -126,12 +162,14 @@ jobs:
               git checkout -f -B main origin/main
             fi
 
-            # Shallow-clone keeps only the latest commit — avoids storing the
-            # entire git history on the EC2 volume.
+            # Shallow-clone keeps only the latest commit
             git gc --prune=now --aggressive 2>/dev/null || true
 
             cd client/personal-finance-app
             npm ci --include=dev
+
+            # Allocate memory limit for Node.js build process
+            export NODE_OPTIONS="--max-old-space-size=1536"
             npm run build
 
             if ! command -v pm2 >/dev/null 2>&1; then
@@ -153,6 +191,13 @@ jobs:
           username: ${{ secrets.AWS_EC2_USERNAME }}
           key: ${{ secrets.AWS_EC2_SSH_KEY }}
           port: 22
+          timeout: 60s
+          command_timeout: 5m
           script: |
-            pm2 status
+            export NVM_DIR="$HOME/.nvm"
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              . "$NVM_DIR/nvm.sh"
+            fi
+            pm2 status || true
+            sleep 3
             curl -I http://localhost:3000 || true

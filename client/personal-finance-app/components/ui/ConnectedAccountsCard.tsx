@@ -133,11 +133,11 @@ export function ConnectedAccountsCard() {
     consent.status === "APPROVED" || consent.status === "ACTIVE";
 
   return (
-    <Card className="p-4 space-y-4">
+    <Card className="connected-accounts-card p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary shadow-2xs">
             <Icon name="building" size={18} />
           </div>
           <div>
@@ -146,7 +146,7 @@ export function ConnectedAccountsCard() {
           </div>
         </div>
         <span
-          className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+          className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-transform duration-200 hover:scale-105 ${
             isApproved
               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
               : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
@@ -162,7 +162,7 @@ export function ConnectedAccountsCard() {
           {accounts.map((acc) => (
             <div
               key={acc.id}
-              className="flex items-center justify-between p-3 rounded-xl bg-muted-bg border border-card-border"
+              className="flex items-center justify-between p-3 rounded-xl bg-muted-bg border border-card-border transition-all duration-200 hover:translate-x-0.5 hover:bg-muted-bg/80"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-card text-foreground font-bold text-xs shadow-xs">

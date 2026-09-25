@@ -8,7 +8,7 @@ export default async function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-5 py-10 bg-background text-foreground transition-colors">
-      <div className="w-full max-w-md rounded-3xl bg-card border border-card-border p-7 shadow-card space-y-6">
+      <div className="dashboard-enter w-full max-w-md rounded-3xl bg-card border border-card-border p-7 shadow-card space-y-6">
         <div>
           <div className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">
             Personal Finance Assistant

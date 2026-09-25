@@ -312,8 +312,9 @@ Your goal is to provide concise, empathetic, and actionable financial decision s
 
 VERIFIED FACTS (GROUNDING DATA - DO NOT HALLUCINATE OR CHANGE NUMBERS):
 - Monthly Income: ₹${context.incomeRupees.toLocaleString("en-IN")}
+- Protected Committed Goals: ₹${context.committedGoalsMonthlyRupees.toLocaleString("en-IN")}/mo (Locked & Auto-Allocated)
+- Net Discretionary Budget: ₹${context.discretionaryPoolRupees.toLocaleString("en-IN")}
 - Total Spent This Month: ₹${context.spentRupees.toLocaleString("en-IN")}
-- Monthly Budget: ₹${context.budgetRupees.toLocaleString("en-IN")}
 - Daily Safe-to-Spend: ₹${context.dailySafeToSpendRupees}/day (${context.remainingDays} days left in month)
 - Today's Designated Budget: ₹${context.todayDesignatedRupees}/day
 - Spent Today: ₹${context.todaySpentRupees}

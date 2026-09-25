@@ -6,13 +6,21 @@ import {
   ALLOCATION_LABELS,
   ALLOCATION_COLORS,
 } from "@/lib/constants";
+import { sendMonthlyReportIfDue } from "@/lib/monthly-report";
+import { processMonthlyGoalAutoAllocations } from "@/lib/goals-engine";
 
 export async function GET() {
- 
   const user = await getAuthenticatedUser();
   if (!user) return unauthorizedResponse();
 
   try {
+    void sendMonthlyReportIfDue(user.id).catch((error) =>
+      console.error("Monthly report error:", error),
+    );
+    void processMonthlyGoalAutoAllocations(user.id).catch((error) =>
+      console.error("Goal auto-allocation error:", error),
+    );
+
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
@@ -106,6 +114,41 @@ export async function GET() {
     const monthSpent = Object.values(spentByCategory).reduce((s, v) => s + v, 0);
     const monthBudget = plan?.monthlyIncome ?? monthlyIncome;
 
+    // Fetch user goals early to protect goal allocations from daily spending
+    const goals = await db
+      .select()
+      .from(schema.goals)
+      .where(eq(schema.goals.userId, user.id))
+      .orderBy(desc(schema.goals.createdAt));
+
+    const topGoal = goals[0]
+      ? {
+          name: goals[0].name,
+          icon: goals[0].icon,
+          current: goals[0].currentAmount,
+          target: goals[0].targetAmount,
+          colorClass: "bg-primary",
+        }
+      : null;
+
+    // Calculate total monthly target committed to active savings goals
+    const activeGoals = goals.filter((g) => g.status !== "completed");
+    const totalGoalsMonthlyTargetPaise = activeGoals.reduce(
+      (sum, g) => sum + (g.monthlyTarget || 0),
+      0,
+    );
+    const totalGoalsMonthlyTargetRupees = Math.round(
+      totalGoalsMonthlyTargetPaise / 100,
+    );
+
+    // NET SPENDABLE BUDGET:
+    // Protect savings goals by deducting their committed monthly target
+    // from the discretionary daily spending pool.
+    const netSpendableBudgetPaise = Math.max(
+      0,
+      monthBudget - totalGoalsMonthlyTargetPaise,
+    );
+
     const daysInMonth = lastDay;
     const dayOfMonth = now.getDate();
     const remainingDays = Math.max(1, daysInMonth - dayOfMonth + 1);
@@ -128,12 +171,15 @@ export async function GET() {
     const todaySpentPaise = Number(todayExpenseRows[0]?.total ?? 0);
     const todaySpentRupees = Math.round(todaySpentPaise / 100);
 
-    // Baseline designated allowance for today at the start of day
-    const spentPriorToTodayPaise = Math.max(0, monthSpent - todaySpentPaise);
-    const availableAtStartOfTodayPaise = Math.max(0, monthBudget - spentPriorToTodayPaise);
+    // Keep today's quota anchored to the net spendable monthly budget.
+    const dailyQuotaPaise = Math.round(netSpendableBudgetPaise / daysInMonth);
+    const monthStart = new Date(year, month - 1, 1);
+    const isNewUserThisMonth = profile
+      ? profile.createdAt >= monthStart
+      : false;
     const todayDesignatedRupees = Math.max(
       0,
-      Math.round(availableAtStartOfTodayPaise / remainingDays / 100),
+      Math.round(dailyQuotaPaise / 100),
     );
 
     const isOverDailyBudget = todayDesignatedRupees > 0 && todaySpentRupees > todayDesignatedRupees;
@@ -144,27 +190,21 @@ export async function GET() {
 
     // Future daily safe-to-spend baseline across remaining days after today
     const futureDays = Math.max(1, remainingDays - 1);
-    const remainingMonthPaise = Math.max(0, monthBudget - monthSpent);
+    const spentBeforeTodayPaise = Math.max(0, monthSpent - todaySpentPaise);
+    const elapsedDaysBudgetPaise = dailyQuotaPaise * Math.max(0, dayOfMonth - 1);
+    const consumedBeforeTodayPaise = isNewUserThisMonth
+      ? Math.max(spentBeforeTodayPaise, elapsedDaysBudgetPaise)
+      : spentBeforeTodayPaise;
+
+    // Remaining spendable envelope respects protected goal commitments
+    const remainingMonthPaise = Math.max(
+      0,
+      netSpendableBudgetPaise - consumedBeforeTodayPaise - todaySpentPaise,
+    );
     const baselineDailyRate = Math.max(
       0,
       Math.round(remainingMonthPaise / (remainingDays > 1 ? futureDays : 1) / 100),
     );
-
-    const goals = await db
-      .select()
-      .from(schema.goals)
-      .where(eq(schema.goals.userId, user.id))
-      .orderBy(desc(schema.goals.createdAt));
-
-    const topGoal = goals[0]
-      ? {
-          name: goals[0].name,
-          icon: goals[0].icon,
-          current: goals[0].currentAmount,
-          target: goals[0].targetAmount,
-          colorClass: "bg-primary",
-        }
-      : null;
 
     // Query goal contributions this month
     const goalContribRows = await db
@@ -252,28 +292,32 @@ export async function GET() {
       if (isOverDailyBudget) {
         insightText = `You've spent ₹${todaySpentRupees.toLocaleString("en-IN")} today (₹${overspentAmount.toLocaleString("en-IN")} above your daily limit). Safe daily allowance adjusted to ₹${baselineDailyRate}/day for upcoming days.`;
         insightTone = "warning";
-      } else if (monthSpent < monthBudget * 0.7) {
+      } else if (monthSpent < netSpendableBudgetPaise * 0.7) {
         insightText = `You're ₹${Math.round(
-          (monthBudget - monthSpent) / 100,
+          (netSpendableBudgetPaise - monthSpent) / 100,
         ).toLocaleString("en-IN")} ahead of your spending plan. Great job!`;
         insightTone = "positive";
-      } else if (monthSpent > monthBudget) {
-        insightText = `You've exceeded your monthly budget by ₹${Math.round(
-          (monthSpent - monthBudget) / 100,
-        ).toLocaleString("en-IN")}. Consider adjusting discretionary expenses.`;
+      } else if (monthSpent > netSpendableBudgetPaise) {
+        insightText = `You've exceeded your monthly discretionary budget by ₹${Math.round(
+          (monthSpent - netSpendableBudgetPaise) / 100,
+        ).toLocaleString("en-IN")}. Consider trimming non-essential expenses to protect your goals.`;
         insightTone = "warning";
       }
     }
 
     let safeToSpendSubtitle = "Safe daily limit for today";
+    const goalsNote = totalGoalsMonthlyTargetRupees > 0
+      ? ` • ₹${totalGoalsMonthlyTargetRupees.toLocaleString("en-IN")}/mo saved in goals`
+      : "";
+
     if (monthBudget <= 0) {
       safeToSpendSubtitle = "Set income in Profile to activate Safe-to-Spend";
     } else if (isOverDailyBudget) {
-      safeToSpendSubtitle = `Exceeded today by ₹${overspentAmount.toLocaleString("en-IN")} (${todaySpentRupees.toLocaleString("en-IN")} spent of ₹${todayDesignatedRupees.toLocaleString("en-IN")})`;
+      safeToSpendSubtitle = `Exceeded today by ₹${overspentAmount.toLocaleString("en-IN")} (${todaySpentRupees.toLocaleString("en-IN")} spent of ₹${todayDesignatedRupees.toLocaleString("en-IN")})${goalsNote}`;
     } else if (todaySpentRupees > 0) {
-      safeToSpendSubtitle = `₹${todaySpentRupees.toLocaleString("en-IN")} spent of ₹${todayDesignatedRupees.toLocaleString("en-IN")} daily quota`;
+      safeToSpendSubtitle = `₹${todaySpentRupees.toLocaleString("en-IN")} spent of ₹${todayDesignatedRupees.toLocaleString("en-IN")} daily quota${goalsNote}`;
     } else {
-      safeToSpendSubtitle = `Full ₹${todayDesignatedRupees.toLocaleString("en-IN")} daily quota available today`;
+      safeToSpendSubtitle = `Full ₹${todayDesignatedRupees.toLocaleString("en-IN")} daily quota available today${goalsNote}`;
     }
 
     return NextResponse.json({
@@ -289,6 +333,8 @@ export async function GET() {
       newDailySafeToSpend: baselineDailyRate,
       monthSpent: Math.round(monthSpent / 100),
       monthBudget: Math.round(monthBudget / 100),
+      committedGoalsMonthly: totalGoalsMonthlyTargetRupees,
+      discretionaryBudget: Math.round(netSpendableBudgetPaise / 100),
       overview,
       topGoal,
       insight: { text: insightText, tone: insightTone },
@@ -308,6 +354,8 @@ export async function GET() {
       newDailySafeToSpend: 0,
       monthSpent: 0,
       monthBudget: 0,
+      committedGoalsMonthly: 0,
+      discretionaryBudget: 0,
       overview: [],
       topGoal: null,
       insight: {

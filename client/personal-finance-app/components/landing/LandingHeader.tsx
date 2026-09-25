@@ -66,7 +66,7 @@ export default function LandingHeader() {
           onClick={() => setIsMobileMenuOpen(false)}
         >
           <Image
-            src="/favicon.ico"
+            src="/logo.png"
             alt="SPENDLY"
             width={36}
             height={36}

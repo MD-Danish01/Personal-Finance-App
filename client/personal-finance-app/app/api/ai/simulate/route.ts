@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     const numAmount = typeof amount === "number" ? amount : parseFloat(String(amount).replace(/,/g, ""));
 
-    if (isNaN(numAmount) || numAmount <= 0) {
+    if (!Number.isFinite(numAmount) || numAmount <= 0) {
       return NextResponse.json(
         { error: "Please enter a valid purchase amount greater than 0" },
         { status: 400 },

@@ -95,6 +95,22 @@ jobs:
           ls -lh release
           file release/personal-finance-app.tar.gz
 
+      - name: Prepare release directory on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USERNAME }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 5m
+          script: |
+            set -e
+            rm -rf /tmp/pfa-release
+            mkdir -p /tmp/pfa-release
+            chmod 755 /tmp/pfa-release
+            echo "Prepared /tmp/pfa-release"
+
       - name: Copy release to EC2
         uses: appleboy/scp-action@v1
         with:
@@ -104,9 +120,31 @@ jobs:
           port: 22
           timeout: 60s
           command_timeout: 15m
-          source: "release/personal-finance-app.tar.gz"
+          source: "release/*"
           target: "/tmp/pfa-release"
           overwrite: true
+
+      - name: Verify release arrived on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USERNAME }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 5m
+          script: |
+            set -e
+
+            echo "=== Files received ==="
+            find /tmp/pfa-release -maxdepth 3 -type f -print -exec ls -lh {} \;
+
+            if [ ! -f "/tmp/pfa-release/personal-finance-app.tar.gz" ]; then
+              echo "ERROR: personal-finance-app.tar.gz was not found."
+              exit 1
+            fi
+
+            echo "Release artifact found successfully."
 
       - name: Install release and restart application
         uses: appleboy/ssh-action@v1.2.0

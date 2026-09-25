@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForBuild: false,
   },
 
+  typescript: {
+    ignoreBuildErrors: process.env.SKIP_TYPE_CHECK === "true",
+  },
+
   images: {
     remotePatterns: [
       {

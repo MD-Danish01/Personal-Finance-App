@@ -112,18 +112,7 @@ jobs:
             sudo journalctl --vacuum-time=1d --vacuum-size=20M 2>/dev/null || true
             sudo rm -rf /var/log/*.gz /var/log/*.[0-9] /var/log/*.old /var/log/syslog* 2>/dev/null || true
 
-            # 7. Ensure at least 512MB swap for build stability (OOM protection)
-            SWAP_SIZE_MB=$(free -m | awk '/^Swap:/{print $2}')
-            if [ "$SWAP_SIZE_MB" -lt 512 ] || [ "$SWAP_SIZE_MB" -gt 1024 ]; then
-              echo "Setting swap to 512MB..."
-              sudo swapoff /swapfile 2>/dev/null || true
-              sudo rm -f /swapfile 2>/dev/null || true
-              sudo fallocate -l 512M /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=512 2>/dev/null || true
-              sudo chmod 600 /swapfile
-              sudo mkswap /swapfile 2>/dev/null || true
-              sudo swapon /swapfile 2>/dev/null || true
-              grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null 2>&1 || true
-            fi
+            
 
             # Fix broken apt state and remove old kernel packages
             sudo apt --fix-broken install -y 2>/dev/null || true

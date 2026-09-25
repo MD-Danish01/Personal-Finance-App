@@ -59,15 +59,24 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           rm -rf release
+
+          # Next.js standalone does not include these automatically.
+          # Put them inside the standalone runtime directory.
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+
           mkdir -p release
 
-          tar -czf release/personal-finance-app.tar.gz \
-            .next/standalone \
-            .next/static \
-            public
+          # Archive the CONTENTS of standalone, not the standalone directory itself.
+          tar -C .next/standalone \
+            -czf release/personal-finance-app.tar.gz \
+            .
 
           echo "=== Release size ==="
           du -h release/personal-finance-app.tar.gz
+
+          echo "=== Release contents ==="
+          tar -tzf release/personal-finance-app.tar.gz | head -50
 
       - name: Upload production artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -216,32 +225,32 @@ jobs:
             rm -rf "$STAGING_DIR"
             mkdir -p "$STAGING_DIR"
 
-            # ---------------------------------------------------------------
-            # Extract standalone release.
-            # ---------------------------------------------------------------
+            echo "=== Extracting standalone release ==="
 
             tar -xzf "$RELEASE_FILE" \
               -C "$STAGING_DIR"
 
-            echo "=== Extracted files ==="
-            find "$STAGING_DIR" -maxdepth 4 -type f | head -100
+            echo "=== Extracted structure ==="
+            find "$STAGING_DIR" -maxdepth 3 -type f | head -100
 
-            # ---------------------------------------------------------------
-            # Validate standalone build.
-            # ---------------------------------------------------------------
-
-            if [ ! -f "$STAGING_DIR/.next/standalone/server.js" ]; then
-              echo "ERROR: .next/standalone/server.js was not found."
+            # Validate the standalone runtime.
+            if [ ! -f "$STAGING_DIR/server.js" ]; then
+              echo "ERROR: server.js was not found in standalone release."
               exit 1
             fi
 
             if [ ! -d "$STAGING_DIR/.next/static" ]; then
-              echo "ERROR: .next/static was not found."
+              echo "ERROR: .next/static was not found inside standalone release."
               exit 1
             fi
 
             if [ ! -d "$STAGING_DIR/public" ]; then
-              echo "ERROR: public directory was not found."
+              echo "ERROR: public was not found inside standalone release."
+              exit 1
+            fi
+
+            if [ ! -d "$STAGING_DIR/node_modules" ]; then
+              echo "ERROR: standalone node_modules was not found."
               exit 1
             fi
 
@@ -260,18 +269,30 @@ jobs:
             # Keep .env!
             # ---------------------------------------------------------------
 
+            echo "=== Installing new standalone release ==="
+
+            # Stop the current application first.
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 delete personal-finance-app >/dev/null 2>&1 || true
+            fi
+
+            # Remove ONLY old runtime files.
+            # .env is intentionally preserved.
             rm -rf "$APP_PATH/.next"
             rm -rf "$APP_PATH/node_modules"
             rm -rf "$APP_PATH/public"
+            rm -f "$APP_PATH/server.js"
+            rm -f "$APP_PATH/package.json"
 
-            # ---------------------------------------------------------------
-            # Install the new build.
-            # ---------------------------------------------------------------
-
-            mv "$STAGING_DIR/.next" "$APP_PATH/.next"
-            mv "$STAGING_DIR/public" "$APP_PATH/public"
+            # Copy standalone release into the application root.
+            cp -a "$STAGING_DIR/." "$APP_PATH/"
 
             rm -rf "$STAGING_DIR"
+
+            echo "=== New application structure ==="
+            ls -lah "$APP_PATH"
+            ls -lah "$APP_PATH/.next"
+            ls -lah "$APP_PATH/public"
             rm -rf "$RELEASE_DIR"
 
             cd "$APP_PATH"
@@ -284,7 +305,7 @@ jobs:
             export PORT=3000
             export HOSTNAME=0.0.0.0
 
-            pm2 start .next/standalone/server.js \
+            pm2 start "$APP_PATH/server.js" \
               --name personal-finance-app \
               --cwd "$APP_PATH" \
               --node-args="--env-file=$APP_PATH/.env"

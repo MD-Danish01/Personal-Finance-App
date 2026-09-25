@@ -53,6 +53,30 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
+      # Create one portable production package.
+      # This happens on the GitHub runner, NOT on EC2.
+      - name: Package standalone release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          rm -rf release
+          mkdir -p release
+
+          tar -czf release/personal-finance-app.tar.gz \
+            .next/standalone \
+            .next/static \
+            public
+
+          echo "=== Release size ==="
+          du -h release/personal-finance-app.tar.gz
+
+      - name: Upload production artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: personal-finance-app-release
+          path: client/personal-finance-app/release/personal-finance-app.tar.gz
+          retention-days: 1
+
   deploy:
     name: Deploy to AWS EC2
     needs: ci
@@ -60,7 +84,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy over SSH
+      - name: Download production artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: personal-finance-app-release
+          path: release
+
+      - name: Show downloaded artifact
+        run: |
+          ls -lh release
+          file release/personal-finance-app.tar.gz
+
+      - name: Copy release to EC2
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USERNAME }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 15m
+          source: "release/personal-finance-app.tar.gz"
+          target: "/tmp/pfa-release"
+          overwrite: true
+
+      - name: Install release and restart application
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
@@ -68,7 +116,8 @@ jobs:
           key: ${{ secrets.AWS_EC2_SSH_KEY }}
           port: 22
           timeout: 60s
-          command_timeout: 30m
+          command_timeout: 15m
+
           script: |
             set -e
 
@@ -77,106 +126,125 @@ jobs:
               . "$NVM_DIR/nvm.sh"
             fi
 
+            echo "=== Runtime versions ==="
+            node -v
+            npm -v
+            pm2 -v || true
+
             APP_DIR="${{ secrets.EC2_APP_DIR }}"
             APP_DIR="${APP_DIR:-/project/Personal-Finance-App}"
 
-            # ── Free up disk space deeply before build ───────────────────
-            echo "=== Disk usage before cleanup ==="
-            df -h / || true
+            APP_PATH="$APP_DIR/client/personal-finance-app"
+            RELEASE_DIR="/tmp/pfa-release"
 
-            # 1. Flush PM2 logs to recover disk space from accumulated logs
+            echo "=== Disk before deployment ==="
+            df -h /
+
+            echo "=== Memory before deployment ==="
+            free -h
+
+            # Make sure application directory exists.
+            sudo mkdir -p "$APP_PATH"
+            sudo chown "$(whoami)":"$(whoami)" "$APP_PATH"
+
+            # IMPORTANT:
+            # Keep the server-side .env file.
+            if [ ! -f "$APP_PATH/.env" ]; then
+              echo "ERROR: $APP_PATH/.env does not exist."
+              echo "Create the production .env file before deploying."
+              exit 1
+            fi
+
+            # Make sure the artifact arrived.
+            if [ ! -f "$RELEASE_DIR/personal-finance-app.tar.gz" ]; then
+              echo "ERROR: Release artifact was not uploaded."
+              exit 1
+            fi
+
+            echo "=== Release artifact ==="
+            ls -lh "$RELEASE_DIR/personal-finance-app.tar.gz"
+
+            # Extract into a temporary directory first.
+            # This avoids replacing the current deployment with a
+            # partially extracted package.
+            STAGING_DIR="$APP_PATH/.release-staging"
+
+            rm -rf "$STAGING_DIR"
+            mkdir -p "$STAGING_DIR"
+
+            tar -xzf "$RELEASE_DIR/personal-finance-app.tar.gz" \
+              -C "$STAGING_DIR"
+
+            # Validate the standalone server before touching the live app.
+            if [ ! -f "$STAGING_DIR/.next/standalone/server.js" ]; then
+              echo "ERROR: standalone/server.js was not found."
+              exit 1
+            fi
+
+            if [ ! -d "$STAGING_DIR/.next/static" ]; then
+              echo "ERROR: .next/static was not found."
+              exit 1
+            fi
+
+            echo "=== Standalone build validated ==="
+
+            # Stop/remove the OLD PM2 process.
+            # The old process was running `npm start`.
+            # The new process will run standalone/server.js directly.
             if command -v pm2 >/dev/null 2>&1; then
-              pm2 flush || true
-            fi
-            rm -rf "$HOME/.pm2/logs"/* 2>/dev/null || true
-
-            # 2. Clean npm cache, user caches, and temp directories
-            npm cache clean --force 2>/dev/null || true
-            rm -rf "$HOME/.cache" "$HOME/.npm" /tmp/* /var/tmp/* 2>/dev/null || true
-
-            # 3. Remove Next.js build output and node_modules
-            rm -rf "$APP_DIR/client/personal-finance-app/node_modules"
-            rm -rf "$APP_DIR/client/personal-finance-app/.next"
-
-            # 4. Remove Docker stopped containers, unused images and build cache if Docker exists
-            if command -v docker >/dev/null 2>&1; then
-              docker system prune -a --volumes -f 2>/dev/null || true
+              pm2 delete personal-finance-app >/dev/null 2>&1 || true
             fi
 
-            # 5. Clean apt cache, remove old unused kernels and dependencies (frees 1-2 GB)
-            sudo apt-get clean 2>/dev/null || true
-            sudo apt-get autoremove --purge -y 2>/dev/null || true
-            sudo rm -rf /var/cache/apt/archives/*.deb 2>/dev/null || true
+            # Remove old build output and old node_modules.
+            # node_modules is no longer required on the production server.
+            rm -rf "$APP_PATH/.next"
+            rm -rf "$APP_PATH/node_modules"
+            rm -rf "$APP_PATH/public"
 
-            # 6. Clean system logs & old rotated logs
-            sudo journalctl --vacuum-time=1d --vacuum-size=20M 2>/dev/null || true
-            sudo rm -rf /var/log/*.gz /var/log/*.[0-9] /var/log/*.old /var/log/syslog* 2>/dev/null || true
+            # Install the already-built production files.
+            mv "$STAGING_DIR/.next" "$APP_PATH/.next"
+            mv "$STAGING_DIR/public" "$APP_PATH/public"
 
-            
+            rm -rf "$STAGING_DIR"
 
-            # Fix broken apt state and remove old kernel packages
-            sudo apt --fix-broken install -y 2>/dev/null || true
-            sudo apt-get autoremove --purge -y 2>/dev/null || true
+            # The server still keeps its production .env.
+            cd "$APP_PATH"
 
-            # 8. Auto-expand filesystem if EBS volume was resized in AWS Console
-            ROOT_DISK=$(df / | tail -1 | awk '{print $1}')
-            ROOT_DEV=$(echo "$ROOT_DISK" | sed -E 's/[0-9]+$//; s/p[0-9]+$//')
-            PART_NUM=$(echo "$ROOT_DISK" | grep -o '[0-9]*$')
-            if [ -n "$ROOT_DEV" ] && [ -n "$PART_NUM" ]; then
-              sudo growpart "$ROOT_DEV" "$PART_NUM" 2>/dev/null || true
-              sudo resize2fs "$ROOT_DISK" 2>/dev/null || sudo xfs_growfs / 2>/dev/null || true
-            fi
+            echo "=== Starting standalone Next.js server ==="
 
-            echo "=== Disk usage after cleanup ==="
-            df -h / || true
-            # ─────────────────────────────────────────────────────────────
-
-            sudo mkdir -p "$APP_DIR"
-            sudo chown -R "$(whoami)":"$(whoami)" "$APP_DIR"
-            cd "$APP_DIR"
-
-            git config --global --add safe.directory "$APP_DIR" || true
-
-            # Pull latest code. git reset --hard only affects tracked files;
-            # untracked files (.env, secrets) are never touched.
-            if [ -d .git ]; then
-              git remote set-url origin https://github.com/${{ github.repository }}.git 2>/dev/null || true
-              git fetch --depth=1 origin main
-              git reset --hard origin/main
-            else
-              git init
-              git remote add origin https://github.com/${{ github.repository }}.git 2>/dev/null || git remote set-url origin https://github.com/${{ github.repository }}.git
-              git fetch --depth=1 origin main
-              git checkout -f -B main origin/main
-            fi
-
-            # Shallow-clone keeps only the latest commit
-            git gc --prune=now --aggressive 2>/dev/null || true
-
-            cd client/personal-finance-app
-            npm ci --include=dev
-
-            # Kill any stray next build processes left over from a crashed previous build
-            pkill -9 -f "next build" 2>/dev/null || true
-            pkill -9 -f "next-server" 2>/dev/null || true
-            sleep 1
-            rm -rf .next
-
-            # Allocate memory limit for Node.js build process
-            export NODE_OPTIONS="--max-old-space-size=1024"
-            npm run build
+            export NODE_ENV=production
+            export PORT=3000
+            export HOSTNAME=0.0.0.0
 
             if ! command -v pm2 >/dev/null 2>&1; then
-              npm install -g pm2
+              echo "PM2 is not installed."
+              echo "Install PM2 once on the EC2 server."
+              exit 1
             fi
 
-            if pm2 show personal-finance-app >/dev/null 2>&1; then
-              pm2 restart personal-finance-app
-            else
-              pm2 start npm --name personal-finance-app -- start
-            fi
+            # Node 20 supports --env-file.
+            # This loads the server-side .env without putting secrets
+            # into the GitHub artifact.
+            pm2 start .next/standalone/server.js \
+              --name personal-finance-app \
+              --cwd "$APP_PATH" \
+              --node-args="--env-file=$APP_PATH/.env"
 
             pm2 save
+
+            echo "=== Deployment completed ==="
+
+            echo "=== PM2 status ==="
+            pm2 status
+
+            echo "=== Memory after deployment ==="
+            free -h
+
+            echo "=== Disk after deployment ==="
+            df -h /
+
+            # Clean temporary uploaded artifact.
+            rm -rf "$RELEASE_DIR"
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.2.0
@@ -187,11 +255,30 @@ jobs:
           port: 22
           timeout: 60s
           command_timeout: 5m
+
           script: |
             export NVM_DIR="$HOME/.nvm"
             if [ -s "$NVM_DIR/nvm.sh" ]; then
               . "$NVM_DIR/nvm.sh"
             fi
-            pm2 status || true
-            sleep 3
-            curl -I http://localhost:3000 || true
+
+            echo "=== PM2 ==="
+            pm2 status
+
+            echo "=== Application health ==="
+
+            for i in {1..30}; do
+              if curl -fsS http://localhost:3000/api/ping >/dev/null; then
+                echo "Application is healthy."
+                exit 0
+              fi
+
+              echo "Waiting for application... attempt $i/30"
+              sleep 2
+            done
+
+            echo "Application did not become healthy."
+            echo "=== PM2 logs ==="
+            pm2 logs personal-finance-app --lines 100 --nostream || true
+
+            exit 1

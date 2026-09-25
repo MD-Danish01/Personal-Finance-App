@@ -4,12 +4,10 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   allowedDevOrigins: ["192.168.1.7"],
 
+  output: "standalone",
+
   experimental: {
     turbopackFileSystemCacheForBuild: false,
-  },
-
-  typescript: {
-    ignoreBuildErrors: process.env.SKIP_TYPE_CHECK === "true",
   },
 
   images: {

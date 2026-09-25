@@ -83,38 +83,54 @@ export default function PlanPage() {
 
   return (
     <div className="plan-page pb-8 space-y-6">
-      <Header onEditPlan={() => setEditing(true)} />
+      <div
+        className="dashboard-enter"
+        style={{ animationDelay: "0ms" }}
+      >
+        <Header onEditPlan={() => setEditing(true)} />
+      </div>
 
       {/* Stale-data badge */}
       {fromCache && cachedAt !== null && (
-        <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+        <div
+          className="dashboard-enter flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"
+          style={{ animationDelay: "40ms" }}
+        >
           <WifiOff size={13} />
           <span>Showing offline data — last updated {formatRelativeTime(cachedAt)}</span>
         </div>
       )}
 
       {/* Income overview banner */}
-      <Card className="flex items-center gap-3.5 p-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary font-bold shadow-xs">
-          <Icon name="wallet" size={20} />
-        </span>
-        <div className="flex-1 min-w-0">
-          <span className="text-xs font-semibold text-muted block">Planned Monthly Income</span>
-          <span className="text-lg font-bold text-foreground font-mono">
-            {formatINR(plan.monthlyIncome / 100)}
+      <div
+        className="dashboard-enter"
+        style={{ animationDelay: "80ms" }}
+      >
+        <Card className="plan-income-card flex items-center gap-3.5 p-4">
+          <span className="plan-income-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary font-bold shadow-xs">
+            <Icon name="wallet" size={20} />
           </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="px-3 py-1.5 rounded-xl bg-muted-bg hover:bg-primary-soft hover:text-primary text-xs font-bold text-muted transition-colors cursor-pointer"
-        >
-          Edit Split
-        </button>
-      </Card>
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-semibold text-muted block">Planned Monthly Income</span>
+            <span className="text-lg font-bold text-foreground font-mono">
+              {formatINR(plan.monthlyIncome / 100)}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="px-3 py-1.5 rounded-xl bg-muted-bg hover:bg-primary-soft hover:text-primary text-xs font-bold text-muted transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+          >
+            Edit Split
+          </button>
+        </Card>
+      </div>
 
       {/* Plan allocation breakdown */}
-      <section>
+      <section
+        className="dashboard-enter"
+        style={{ animationDelay: "160ms" }}
+      >
         <div className="mb-3 flex items-center justify-between px-1">
           <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
             Allocation Strategy (50/20/20/10)
@@ -122,15 +138,16 @@ export default function PlanPage() {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-xs font-bold text-primary hover:underline cursor-pointer"
+            className="text-xs font-bold text-primary hover:underline transition-all duration-200 hover:opacity-80 cursor-pointer"
           >
             Adjust
           </button>
         </div>
         <Card className="divide-y divide-card-border overflow-hidden">
-          {plan.allocations.map((allocation) => (
+          {plan.allocations.map((allocation, index) => (
             <PlanBreakdownRow
               key={allocation.key}
+              index={index}
               allocation={allocation}
               totalIncome={plan.monthlyIncome}
             />
@@ -139,17 +156,26 @@ export default function PlanPage() {
       </section>
 
       {/* Category Spending Limits */}
-      <section>
+      <section
+        className="dashboard-enter"
+        style={{ animationDelay: "240ms" }}
+      >
         <CategoryLimitsCard />
       </section>
 
       {/* Emergency Fund Runway */}
-      <section>
+      <section
+        className="dashboard-enter"
+        style={{ animationDelay: "320ms" }}
+      >
         <EmergencyFundCard />
       </section>
 
       {/* Why this plan insight */}
-      <section>
+      <section
+        className="dashboard-enter"
+        style={{ animationDelay: "400ms" }}
+      >
         <InsightCard
           title="Why this plan?"
           text={plan.whyThisPlan}
@@ -159,7 +185,10 @@ export default function PlanPage() {
       </section>
 
       {/* Connected Accounts / Bank AA */}
-      <section>
+      <section
+        className="dashboard-enter"
+        style={{ animationDelay: "480ms" }}
+      >
         <ConnectedAccountsCard />
       </section>
 

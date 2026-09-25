@@ -103,14 +103,14 @@ export function CategoryLimitsCard() {
         </div>
       </div>
 
-      <Card className="divide-y divide-card-border overflow-hidden">
+      <Card className="category-limit-card divide-y divide-card-border overflow-hidden">
         {loading ? (
           <div className="p-6 text-center text-xs text-muted">
             <Icon name="refresh-cw" size={16} className="animate-spin text-primary mx-auto mb-2" />
             Loading spending limits...
           </div>
         ) : (
-          limits.map((item) => {
+          limits.map((item, index) => {
             const meta = CATEGORY_META[item.category] || {
               icon: "wallet",
               colorClass: "text-primary bg-primary-soft",
@@ -123,11 +123,17 @@ export function CategoryLimitsCard() {
             else if (item.status === "warning") progressColor = "bg-amber-500";
 
             return (
-              <div key={item.category} className="p-3.5 hover:bg-muted-bg/50 transition-colors">
+              <div
+                key={item.category}
+                className="category-limit-row p-3.5 hover:bg-muted-bg/50 transition-all duration-200"
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                }}
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${meta.colorClass}`}
+                      className={`category-limit-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl shadow-2xs ${meta.colorClass}`}
                     >
                       <Icon name={meta.icon} size={15} />
                     </span>
@@ -135,7 +141,7 @@ export function CategoryLimitsCard() {
                       <span className="text-xs font-bold text-foreground block truncate">
                         {item.category}
                       </span>
-                      <span className="text-[11px] text-muted">
+                      <span className="text-[11px] text-muted font-mono">
                         Spent: <span className="font-semibold text-foreground">{formatINR(item.spentPaise / 100)}</span>
                         {hasLimit && (
                           <span> / {formatINR(item.monthlyLimit / 100)}</span>
@@ -147,7 +153,7 @@ export function CategoryLimitsCard() {
                   <div className="flex items-center gap-2">
                     {hasLimit ? (
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-transform duration-200 hover:scale-105 ${
                           item.status === "exceeded"
                             ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
                             : item.status === "warning"
@@ -168,7 +174,7 @@ export function CategoryLimitsCard() {
                     <button
                       type="button"
                       onClick={() => openEditor(item)}
-                      className="p-1 text-muted hover:text-primary transition-colors cursor-pointer"
+                      className="p-1 text-muted hover:text-primary transition-all duration-200 hover:scale-110 cursor-pointer"
                       title="Edit limit"
                     >
                       <Icon name="swap" size={14} />

@@ -1891,6 +1891,344 @@ body {
     background-color: transparent;
   }
 }
+
+/* =========================================================
+   PLAN PAGE ANIMATIONS & INTERACTIVE STYLES
+   ========================================================= */
+
+.plan-page {
+  padding-bottom: 24px;
+}
+
+/* Income Overview Card */
+.plan-income-card {
+  transform: translateZ(0);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms ease;
+}
+
+.plan-income-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.06),
+    0 3px 10px rgba(0, 0, 0, 0.035);
+}
+
+.plan-income-icon {
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease;
+}
+
+.plan-income-card:hover .plan-income-icon {
+  transform: rotate(6deg) scale(1.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Plan Breakdown Rows */
+.plan-breakdown-row {
+  opacity: 0;
+  animation: planRowEnter 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    background-color 200ms ease,
+    transform 200ms ease;
+}
+
+.plan-breakdown-row:hover {
+  background-color: var(--muted-bg);
+}
+
+.plan-breakdown-icon {
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.plan-breakdown-row:hover .plan-breakdown-icon {
+  transform: scale(1.1) rotate(4deg);
+}
+
+@keyframes planRowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Category Limits Card */
+.category-limit-card {
+  transform: translateZ(0);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms ease;
+}
+
+.category-limit-card:hover {
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.05),
+    0 3px 10px rgba(0, 0, 0, 0.03);
+}
+
+.category-limit-row {
+  opacity: 0;
+  animation: categoryLimitEnter 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    background-color 200ms ease,
+    transform 200ms ease;
+}
+
+.category-limit-row:hover {
+  transform: translateX(2px);
+}
+
+.category-limit-icon {
+  transition: transform 300ms ease;
+}
+
+.category-limit-row:hover .category-limit-icon {
+  transform: scale(1.08);
+}
+
+@keyframes categoryLimitEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Emergency Fund Card */
+.emergency-fund-card {
+  transform: translateZ(0);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.emergency-fund-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.06),
+    0 3px 10px rgba(0, 0, 0, 0.035);
+}
+
+.emergency-fund-shield {
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease;
+}
+
+.emergency-fund-card:hover .emergency-fund-shield {
+  transform: scale(1.1) rotate(-4deg);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.2);
+}
+
+/* Connected Accounts Card */
+.connected-accounts-card {
+  transform: translateZ(0);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms ease;
+}
+
+.connected-accounts-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.05),
+    0 3px 10px rgba(0, 0, 0, 0.03);
+}
+
+/* =========================================================
+   GOALS PAGE ANIMATIONS & INTERACTIVE STYLES
+   ========================================================= */
+
+.goals-page {
+  padding-bottom: 24px;
+}
+
+/* Master Capacity Card */
+.goals-capacity-card {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.goals-capacity-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.07),
+    0 3px 10px rgba(0, 0, 0, 0.04);
+}
+
+.goals-capacity-card::after {
+  content: "";
+  position: absolute;
+  inset: -60% 45% auto -30%;
+  height: 220%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 12%, transparent), transparent);
+  transform: rotate(18deg);
+  animation: home-sheen 12s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.goals-capacity-stat {
+  transition:
+    transform 200ms ease,
+    background-color 200ms ease;
+}
+
+.goals-capacity-stat:hover {
+  transform: translateY(-1px);
+}
+
+/* Rebalance Banner */
+.goals-rebalance-banner {
+  transform: translateZ(0);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease;
+}
+
+.goals-rebalance-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Goal Item Card */
+.goal-item-card {
+  transform: translateZ(0);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms ease;
+}
+
+.goal-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.07),
+    0 3px 10px rgba(0, 0, 0, 0.04);
+}
+
+.goal-item-icon {
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms ease;
+}
+
+.goal-item-card:hover .goal-item-icon {
+  transform: scale(1.1) rotate(-4deg);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Empty Goals Float Animation */
+.goal-empty-icon {
+  display: inline-flex;
+  animation: goalFloat 3s ease-in-out infinite;
+}
+
+@keyframes goalFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* =========================================================
+   PROFILE PAGE ANIMATIONS & INTERACTIVE STYLES
+   ========================================================= */
+
+.profile-page {
+  padding-bottom: 24px;
+}
+
+.profile-user-card {
+  transform: translateZ(0);
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 350ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.profile-user-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.06),
+    0 3px 10px rgba(0, 0, 0, 0.035);
+}
+
+.profile-avatar-pulse {
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.profile-user-card:hover .profile-avatar-pulse {
+  transform: scale(1.06);
+}
+
+.profile-section-card {
+  transform: translateZ(0);
+  transition:
+    transform 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.profile-section-card:hover {
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.profile-nav-item {
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.profile-nav-item:hover {
+  transform: translateX(3px);
+}
+
+/* Reduced motion for Plan, Goals, Profile */
+@media (prefers-reduced-motion: reduce) {
+  .plan-income-card,
+  .plan-breakdown-row,
+  .category-limit-card,
+  .category-limit-row,
+  .emergency-fund-card,
+  .connected-accounts-card,
+  .goals-capacity-card,
+  .goals-rebalance-banner,
+  .goal-item-card,
+  .profile-user-card,
+  .profile-section-card {
+    transition: none;
+    transform: none;
+    animation: none;
+  }
+
+  .plan-breakdown-row,
+  .category-limit-row {
+    opacity: 1;
+  }
+
+  .goals-capacity-card::after,
+  .goal-empty-icon {
+    animation: none;
+  }
+}
+
 /* =========================================================
    SPENDLY — PREMIUM LANDING PAGE
    ADD THIS AT THE VERY END OF globals.css

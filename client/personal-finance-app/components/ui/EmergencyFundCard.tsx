@@ -121,10 +121,10 @@ export function EmergencyFundCard() {
         </button>
       </div>
 
-      <Card className="p-4 space-y-4">
+      <Card className="emergency-fund-card p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary font-bold shadow-xs">
+            <span className="emergency-fund-shield flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary font-bold shadow-xs">
               <Icon name="shield" size={20} />
             </span>
             <div>
@@ -133,7 +133,7 @@ export function EmergencyFundCard() {
                   {data.runwayMonths} Months
                 </span>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${runwayBadgeClass}`}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all duration-200 hover:scale-105 ${runwayBadgeClass}`}
                 >
                   {runwayStatus}
                 </span>
@@ -146,7 +146,7 @@ export function EmergencyFundCard() {
         </div>
 
         <div>
-          <div className="flex items-center justify-between text-xs mb-1.5">
+          <div className="flex items-center justify-between text-xs mb-1.5 font-mono">
             <span className="text-muted">Corpus Saved</span>
             <span className="font-bold text-foreground">
               {formatINR(data.currentAmount / 100)} / {formatINR(data.targetAmount / 100)} (
@@ -167,15 +167,15 @@ export function EmergencyFundCard() {
         </div>
 
         <div className="grid grid-cols-2 gap-2 pt-2 border-t border-card-border text-xs">
-          <div className="p-2 rounded-xl bg-muted-bg">
+          <div className="p-2 rounded-xl bg-muted-bg transition-transform duration-200 hover:translate-y-[-1px]">
             <span className="text-[10px] text-muted block">Monthly Essentials</span>
-            <span className="font-bold text-foreground">
+            <span className="font-bold text-foreground font-mono">
               {formatINR(data.monthlyEssentials / 100)}
             </span>
           </div>
-          <div className="p-2 rounded-xl bg-muted-bg">
+          <div className="p-2 rounded-xl bg-muted-bg transition-transform duration-200 hover:translate-y-[-1px]">
             <span className="text-[10px] text-muted block">Corpus Shortfall</span>
-            <span className="font-bold text-primary">
+            <span className="font-bold text-primary font-mono">
               {data.shortfall > 0 ? formatINR(data.shortfall / 100) : "Goal Met 🎉"}
             </span>
           </div>

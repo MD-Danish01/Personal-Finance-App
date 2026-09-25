@@ -175,7 +175,7 @@ jobs:
             rm -rf .next
 
             # Allocate memory limit for Node.js build process
-            export NODE_OPTIONS="--max-old-space-size=1536"
+            export NODE_OPTIONS="--max-old-space-size=1024"
             npm run build
 
             if ! command -v pm2 >/dev/null 2>&1; then

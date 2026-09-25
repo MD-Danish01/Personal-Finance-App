@@ -125,6 +125,10 @@ jobs:
               grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null 2>&1 || true
             fi
 
+            # Fix broken apt state and remove old kernel packages
+            sudo apt --fix-broken install -y 2>/dev/null || true
+            sudo apt-get autoremove --purge -y 2>/dev/null || true
+
             # 8. Auto-expand filesystem if EBS volume was resized in AWS Console
             ROOT_DISK=$(df / | tail -1 | awk '{print $1}')
             ROOT_DEV=$(echo "$ROOT_DISK" | sed -E 's/[0-9]+$//; s/p[0-9]+$//')

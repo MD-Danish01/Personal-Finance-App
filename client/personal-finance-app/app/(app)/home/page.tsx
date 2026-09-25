@@ -12,6 +12,7 @@ import { GoalProgressCard } from "@/components/screens/GoalProgressCard";
 import { InsightCard } from "@/components/screens/InsightCard";
 import { FinancialAdvisorModal } from "@/components/ai/FinancialAdvisorModal";
 import { OverspendWarningModal } from "@/components/ui/OverspendWarningModal";
+import { MonthlyHealthCardModal } from "@/components/ui/MonthlyHealthCardModal";
 import type { DashboardSummary } from "@/lib/types";
 
 export default function HomePage() {
@@ -19,6 +20,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [advisorOpen, setAdvisorOpen] = useState(false);
+  const [healthCardOpen, setHealthCardOpen] = useState(false);
   // Start with false (safe SSR default), read sessionStorage after mount
   const [warningDismissed, setWarningDismissed] = useState(false);
 
@@ -141,6 +143,7 @@ return (
         <Header
           name={userName}
           onOpenAI={() => setAdvisorOpen(true)}
+          onOpenHealthCard={() => setHealthCardOpen(true)}
         />
       </div>
 
@@ -157,6 +160,7 @@ return (
           isOverDailyBudget={dashboard.isOverDailyBudget}
           overspentAmount={dashboard.overspentAmount}
           subtitle={dashboard.safeToSpendSubtitle}
+          committedGoalsMonthly={dashboard.committedGoalsMonthly}
         />
       </div>
 
@@ -282,6 +286,13 @@ return (
         onClose={() => setAdvisorOpen(false)}
       />
 
+      {/* ================= MONTHLY HEALTH CARD MODAL ================= */}
+
+      <MonthlyHealthCardModal
+        open={healthCardOpen}
+        onClose={() => setHealthCardOpen(false)}
+      />
+
       {/* ================= OVERSPENDING WARNING POPUP ================= */}
 
       <OverspendWarningModal
@@ -302,9 +313,11 @@ return (
 function Header({
   name,
   onOpenAI,
+  onOpenHealthCard,
 }: {
   name: string;
   onOpenAI: () => void;
+  onOpenHealthCard?: () => void;
 }) {
   return (
     <header className="flex items-center justify-between px-1 py-5">
@@ -319,7 +332,19 @@ function Header({
         </p>
       </div>
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
+        {onOpenHealthCard && (
+          <button
+            type="button"
+            onClick={onOpenHealthCard}
+            title="Monthly Financial Health Card"
+            className="flex items-center gap-1.5 px-3 h-9 rounded-xl border border-primary/30 bg-primary-soft text-primary font-bold text-xs hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+          >
+            <Icon name="file-text" size={15} />
+            <span className="hidden sm:inline">Health Card</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onOpenAI}

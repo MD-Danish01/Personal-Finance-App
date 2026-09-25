@@ -66,6 +66,54 @@ export interface Goal {
   deadline: string;
   monthlyTarget: number;
   status: "on_track" | "at_risk" | "completed";
+  autoAllocatedThisMonth?: boolean;
+}
+
+export interface GoalCapacityInfo {
+  hasIncome: boolean;
+  monthlyIncomePaise: number;
+  monthlyIncomeRupees: number;
+  savingsPercent: number;
+  essentialsPercent: number;
+  maxAllowedMonthlyPaise: number;
+  maxAllowedMonthlyRupees: number;
+  recommendedMonthlyPaise: number;
+  recommendedMonthlyRupees: number;
+  existingMonthlyCommitmentPaise: number;
+  existingMonthlyCommitmentRupees: number;
+  remainingMonthlyCapacityPaise: number;
+  remainingMonthlyCapacityRupees: number;
+  activeGoalsCount: number;
+  maxGoalsCount: number;
+  canCreateGoal: boolean;
+  restrictionReason?: string;
+}
+
+export interface GoalRebalanceRecommendation {
+  goalId: string;
+  goalName: string;
+  icon: string;
+  targetAmountRupees: number;
+  currentAmountRupees: number;
+  remainingAmountRupees: number;
+  currentMonthlyTargetRupees: number;
+  suggestedMonthlyTargetRupees: number;
+  deltaMonthlyTargetRupees: number;
+  currentMonthsToTarget: number;
+  suggestedMonthsToTarget: number;
+  reason: string;
+}
+
+export interface RebalancePlan {
+  monthlyIncomeRupees: number;
+  currentTotalMonthlyCommitmentRupees: number;
+  recommendedTotalMonthlyCommitmentRupees: number;
+  monthlySavingsFreedRupees: number;
+  dailySafeToSpendGainRupees: number;
+  isOverAllocated: boolean;
+  pressureLevel: "HIGH" | "MODERATE" | "OPTIMAL";
+  aiExplanation: string;
+  recommendations: GoalRebalanceRecommendation[];
 }
 
 export interface MonthOverviewRow {
@@ -89,6 +137,8 @@ export interface DashboardSummary {
   newDailySafeToSpend?: number;
   monthSpent: number;
   monthBudget: number;
+  committedGoalsMonthly?: number;
+  discretionaryBudget?: number;
   overview: MonthOverviewRow[];
   topGoal: {
     name: string;

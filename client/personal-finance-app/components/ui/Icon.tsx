@@ -61,6 +61,11 @@ import {
   Wifi,
   X,
   Zap,
+  Mic,
+  MicOff,
+  FileText,
+  Printer,
+  Download,
 } from "lucide-react";
 
 export type IconName =
@@ -122,7 +127,12 @@ export type IconName =
   | "copy"
   | "pencil"
   | "send"
-  | "qr-code";
+  | "qr-code"
+  | "mic"
+  | "mic-off"
+  | "file-text"
+  | "printer"
+  | "download";
 
 interface IconProps {
   name: IconName;
@@ -191,6 +201,11 @@ const ICONS: Record<IconName, LucideIcon> = {
   pencil: PencilLine,
   send: Zap,
   "qr-code": QrCode,
+  mic: Mic,
+  "mic-off": MicOff,
+  "file-text": FileText,
+  printer: Printer,
+  download: Download,
 };
 
 export function Icon({ name, size = 20, className, strokeWidth = 1.8 }: IconProps) {

@@ -11,6 +11,7 @@ import { SpendingDonut } from "@/components/screens/SpendingDonut";
 import { TransactionList } from "@/components/screens/TransactionList";
 import { AddTransactionModal } from "@/components/ui/AddTransactionModal";
 import { EditTransactionModal } from "@/components/ui/EditTransactionModal";
+import { MonthlyHealthCardModal } from "@/components/ui/MonthlyHealthCardModal";
 import type { RecentTransactions, SpendingSummary, Transaction } from "@/lib/types";
 
 const DOT_COLORS: Record<string, string> = {
@@ -29,6 +30,8 @@ export default function MoneyPage() {
   const [recent, setRecent] = useState<RecentTransactions | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<"ai" | "manual">("ai");
+  const [isHealthCardOpen, setIsHealthCardOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<RecentItem | null>(null);
 
   const fetchData = useCallback(() => {
@@ -92,13 +95,18 @@ export default function MoneyPage() {
         className="dashboard-enter"
         style={{ animationDelay: "0ms" }}
       >
-        <Header onOpenAdd={() => setIsAddOpen(true)} />
+        <Header
+          onOpenAdd={() => {
+            setAddMode("manual");
+            setIsAddOpen(true);
+          }}
+        />
       </div>
 
-      {/* MONTH + ADD RECORD */}
+      {/* MONTH + ACTION BAR */}
 
       <div
-        className="money-month-bar dashboard-enter"
+        className="money-month-bar dashboard-enter flex items-center justify-between flex-wrap gap-2"
         style={{ animationDelay: "100ms" }}
       >
         <span className="flex items-center gap-1.5 px-1 py-1 text-xs font-bold text-foreground">
@@ -111,14 +119,43 @@ export default function MoneyPage() {
           {spending.monthLabel}
         </span>
 
-        <button
-          type="button"
-          onClick={() => setIsAddOpen(true)}
-          className="money-add-button flex cursor-pointer items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs"
-        >
-          <Icon name="plus" size={14} />
-          <span>Add Record</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Health Card Report Button */}
+          <button
+            type="button"
+            onClick={() => setIsHealthCardOpen(true)}
+            className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-card-border bg-card px-3 py-1.5 text-xs font-bold text-foreground shadow-xs hover:border-primary/40 transition-colors"
+          >
+            <Icon name="file-text" size={14} className="text-primary" />
+            <span className="hidden sm:inline">Health Card</span>
+          </button>
+
+          {/* Quick Voice / AI Log Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setAddMode("ai");
+              setIsAddOpen(true);
+            }}
+            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-primary-soft text-primary px-3 py-1.5 text-xs font-bold shadow-xs hover:opacity-90 transition-opacity"
+          >
+            <Icon name="mic" size={14} />
+            <span>Voice Log</span>
+          </button>
+
+          {/* Manual Add Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setAddMode("manual");
+              setIsAddOpen(true);
+            }}
+            className="money-add-button flex cursor-pointer items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-xs hover:opacity-90 transition-opacity"
+          >
+            <Icon name="plus" size={14} />
+            <span>Add Record</span>
+          </button>
+        </div>
       </div>
 
       {/* SPENDING BY CATEGORY */}
@@ -236,8 +273,16 @@ export default function MoneyPage() {
 
       <AddTransactionModal
         open={isAddOpen}
+        defaultMode={addMode}
         onClose={() => setIsAddOpen(false)}
         onAdded={fetchData}
+      />
+
+      {/* MONTHLY HEALTH CARD MODAL */}
+
+      <MonthlyHealthCardModal
+        open={isHealthCardOpen}
+        onClose={() => setIsHealthCardOpen(false)}
       />
 
       {/* EDIT TRANSACTION MODAL */}
@@ -273,7 +318,7 @@ function Header({ onOpenAdd }: { onOpenAdd: () => void }) {
           type="button"
           onClick={onOpenAdd}
           aria-label="Add transaction"
-          className="money-header-add flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl bg-primary-soft text-primary"
+          className="money-header-add flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs hover:opacity-90 transition-opacity"
         >
           <Icon name="plus" size={18} />
         </button>

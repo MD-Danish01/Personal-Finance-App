@@ -4,8 +4,10 @@ import type {
   ApiResult,
   DashboardSummary,
   Goal,
+  GoalCapacityInfo,
   InsightsBundle,
   Plan,
+  RebalancePlan,
   RecentTransactions,
   SpendingSummary,
 } from "./types";
@@ -86,6 +88,27 @@ export async function getGoals(): Promise<ApiResult<Goal[]>> {
     if (hit) return { data: hit.data, fromCache: true, cachedAt: hit.ts };
     throw err;
   }
+}
+
+export async function getGoalCapacity(): Promise<GoalCapacityInfo> {
+  const { data } = await apiClient.get<GoalCapacityInfo>("/goals/capacity");
+  return data;
+}
+
+export async function getGoalRebalancePlan(): Promise<RebalancePlan> {
+  const { data } = await apiClient.get<RebalancePlan>("/goals/optimize");
+  return data;
+}
+
+export async function applyGoalRebalance(
+  allocations: { goalId: string; monthlyTargetRupees: number }[],
+): Promise<{ success: boolean; updatedCount: number; message: string }> {
+  const { data } = await apiClient.post<{
+    success: boolean;
+    updatedCount: number;
+    message: string;
+  }>("/goals/optimize/apply", { allocations });
+  return data;
 }
 
 export async function getInsights(): Promise<ApiResult<InsightsBundle>> {

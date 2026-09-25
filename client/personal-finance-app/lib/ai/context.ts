@@ -15,6 +15,8 @@ export interface GoalSummary {
   currentRupees: number;
   percent: number;
   deadline: string | null;
+  monthlyTargetRupees: number;
+  status: string;
 }
 
 export interface StructuredFinancialContext {
@@ -22,6 +24,8 @@ export interface StructuredFinancialContext {
   incomeRupees: number;
   spentRupees: number;
   budgetRupees: number;
+  committedGoalsMonthlyRupees: number;
+  discretionaryPoolRupees: number;
   dailySafeToSpendRupees: number;
   remainingBudgetRupees: number;
   remainingBudgetPaise: number;
@@ -129,7 +133,41 @@ export async function getStructuredFinancialContext(
     };
   });
 
-  // 4. Today's Spend & Designated Daily Budget
+  // 4. Goals and Committed Monthly Allocation
+  const goalRows = await db
+    .select()
+    .from(schema.goals)
+    .where(eq(schema.goals.userId, userId))
+    .orderBy(desc(schema.goals.createdAt));
+
+  const goals: GoalSummary[] = goalRows.map((g) => {
+    const cur = Math.round(g.currentAmount / 100);
+    const tgt = Math.round(g.targetAmount / 100);
+    return {
+      id: g.id,
+      name: g.name,
+      icon: g.icon,
+      targetRupees: tgt,
+      currentRupees: cur,
+      percent: tgt > 0 ? Math.min(100, Math.round((cur / tgt) * 100)) : 0,
+      deadline: g.deadline,
+      monthlyTargetRupees: Math.round((g.monthlyTarget || 0) / 100),
+      status: g.status,
+    };
+  });
+
+  const activeGoals = goalRows.filter((g) => g.status !== "completed");
+  const totalGoalsMonthlyPaise = activeGoals.reduce(
+    (sum, g) => sum + (g.monthlyTarget || 0),
+    0,
+  );
+  const committedGoalsMonthlyRupees = Math.round(totalGoalsMonthlyPaise / 100);
+
+  // Protect savings goals: Net spendable pool excludes committed savings goals
+  const spendableBudgetPaise = Math.max(0, budgetPaise - totalGoalsMonthlyPaise);
+  const discretionaryPoolRupees = Math.round(spendableBudgetPaise / 100);
+
+  // 5. Today's Spend & Designated Daily Budget
   const todayStr = `${curYear}-${pad(curMonth)}-${pad(currentDay)}`;
   const todayExpenseRows = await db
     .select({
@@ -147,9 +185,7 @@ export async function getStructuredFinancialContext(
   const todaySpentPaise = Number(todayExpenseRows[0]?.total ?? 0);
   const todaySpentRupees = Math.round(todaySpentPaise / 100);
 
-  // Keep today's quota based on the full monthly budget. Income entered
-  // mid-month must not be divided across only the remaining calendar days.
-  const dailyQuotaPaise = Math.round(budgetPaise / lastDay);
+  const dailyQuotaPaise = Math.round(spendableBudgetPaise / lastDay);
   const monthStart = new Date(curYear, curMonth - 1, 1);
   const isNewUserThisMonth = profile
     ? profile.createdAt >= monthStart
@@ -168,41 +204,21 @@ export async function getStructuredFinancialContext(
   const consumedBeforeTodayPaise = isNewUserThisMonth
     ? Math.max(spentPriorToTodayPaise, elapsedDaysBudgetPaise)
     : spentPriorToTodayPaise;
+
   const remainingBudgetPaise = Math.max(
     0,
-    budgetPaise - consumedBeforeTodayPaise - todaySpentPaise,
+    spendableBudgetPaise - consumedBeforeTodayPaise - todaySpentPaise,
   );
   const dailySafeToSpendRupees = Math.max(
     0,
     Math.round(remainingBudgetPaise / remainingDays / 100),
   );
 
-  // 5. Savings Rate
+  // 6. Savings Rate
   const savingsRatePercent =
     incomeRupees > 0
       ? Math.max(0, Math.round(((incomeRupees - spentRupees) / incomeRupees) * 100))
       : 0;
-
-  // 6. Goals
-  const goalRows = await db
-    .select()
-    .from(schema.goals)
-    .where(eq(schema.goals.userId, userId))
-    .orderBy(desc(schema.goals.createdAt));
-
-  const goals: GoalSummary[] = goalRows.map((g) => {
-    const cur = Math.round(g.currentAmount / 100);
-    const tgt = Math.round(g.targetAmount / 100);
-    return {
-      id: g.id,
-      name: g.name,
-      icon: g.icon,
-      targetRupees: tgt,
-      currentRupees: cur,
-      percent: tgt > 0 ? Math.min(100, Math.round((cur / tgt) * 100)) : 0,
-      deadline: g.deadline,
-    };
-  });
 
   // 7. Limits & Overspent Categories
   const limitRows = await db
@@ -235,6 +251,8 @@ export async function getStructuredFinancialContext(
     incomeRupees,
     spentRupees,
     budgetRupees,
+    committedGoalsMonthlyRupees,
+    discretionaryPoolRupees,
     dailySafeToSpendRupees,
     remainingBudgetRupees: remainingBudgetPaise / 100,
     remainingBudgetPaise,
@@ -271,9 +289,6 @@ export function simulatePurchaseImpact(
   // Spread today's purchase impact across the days after today.
   const futureDays = Math.max(1, context.remainingDays - 1);
 
-  // Upcoming-day spending must stay anchored to the daily quota. Dividing an
-  // untouched monthly balance by only the days left can incorrectly produce a
-  // large rate late in the month (for example, ₹8,000 against a ₹2,500 quota).
   const baselineDaily = Math.min(
     context.todayDesignatedRupees,
     context.dailySafeToSpendRupees,
@@ -314,12 +329,12 @@ export function simulatePurchaseImpact(
 
   if (purchaseAmountPaise > currentAvailablePaise) {
     status = "DEFICIT";
-    statusLabel = "Causes Monthly Deficit";
-    todayImpactNote =     `This ₹${purchaseAmountRupees.toLocaleString("en-IN")} purchase exceeds your remaining monthly unallocated funds (₹${(currentAvailablePaise / 100).toLocaleString("en-IN")}) by ₹${((purchaseAmountPaise - currentAvailablePaise) / 100).toLocaleString("en-IN")}, forcing you to dip into savings.`;
+    statusLabel = "Eats Into Goals & Reserves";
+    todayImpactNote = `This ₹${purchaseAmountRupees.toLocaleString("en-IN")} purchase exceeds your remaining monthly unallocated funds (₹${(currentAvailablePaise / 100).toLocaleString("en-IN")}) by ₹${((purchaseAmountPaise - currentAvailablePaise) / 100).toLocaleString("en-IN")}, directly cannibalizing your protected savings goals (₹${context.committedGoalsMonthlyRupees.toLocaleString("en-IN")}/mo) or essentials!`;
   } else if (isTodayAlreadyOverspent) {
     status = "DEFICIT";
     statusLabel = "Exceeds Today's Budget";
-    todayImpactNote = `You have already exhausted today's designated money (spent ₹${context.todaySpentRupees.toLocaleString("en-IN")} of ₹${context.todayDesignatedRupees.toLocaleString("en-IN")} daily quota). Buying "${itemName}" today adds ₹${purchaseAmountRupees.toLocaleString("en-IN")} to today's deficit and directly penalizes tomorrow and future days, dropping your safe daily allowance to ₹${newDailySafeToSpend}/day.`;
+    todayImpactNote = `You have already exhausted today's designated money (spent ₹${context.todaySpentRupees.toLocaleString("en-IN")} of ₹${context.todayDesignatedRupees.toLocaleString("en-IN")} daily quota). Buying "${itemName}" today adds ₹${purchaseAmountRupees.toLocaleString("en-IN")} to today's deficit and directly penalizes upcoming days, dropping your safe daily allowance to ₹${newDailySafeToSpend}/day.`;
   } else if (willExceedTodayBudget) {
     status = todayOverspentDelta >= context.todayDesignatedRupees * 0.5 ? "DEFICIT" : "TIGHT";
     statusLabel = "Exceeds Today's Allowance";
@@ -331,12 +346,14 @@ export function simulatePurchaseImpact(
   } else {
     status = "SAFE";
     statusLabel = "Safe & Within Today's Limit";
-    todayImpactNote = `Fits within today's remaining safe allowance of ₹${context.todayRemainingRupees.toLocaleString("en-IN")}. You will have ₹${Math.max(0, context.todayRemainingRupees - purchaseAmountRupees).toLocaleString("en-IN")} left for the rest of today.`;
+    todayImpactNote = `Fits within today's remaining safe allowance of ₹${context.todayRemainingRupees.toLocaleString("en-IN")}. Your goals (₹${context.committedGoalsMonthlyRupees.toLocaleString("en-IN")}/mo) remain fully protected, leaving ₹${Math.max(0, context.todayRemainingRupees - purchaseAmountRupees).toLocaleString("en-IN")} for the rest of today.`;
   }
 
   // Goal delay estimate
   let goalImpactText = "No major impact on your active goals.";
-  if (context.goals.length > 0) {
+  if (purchaseAmountPaise > currentAvailablePaise && context.committedGoalsMonthlyRupees > 0) {
+    goalImpactText = `⚠️ HIGH RISK: Dips into your ₹${context.committedGoalsMonthlyRupees.toLocaleString("en-IN")}/mo committed goals envelope!`;
+  } else if (context.goals.length > 0) {
     const topGoal = context.goals[0];
     const remainingGoalPaise = (topGoal.targetRupees - topGoal.currentRupees) * 100;
     if (remainingGoalPaise > 0) {

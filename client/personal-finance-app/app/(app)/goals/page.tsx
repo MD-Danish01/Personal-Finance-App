@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getGoals } from "@/lib/api";
+import { getGoals, getGoalCapacity, getGoalRebalancePlan } from "@/lib/api";
 import { formatINR, formatPercent, formatRelativeTime } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
@@ -10,19 +10,23 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { GoalCreateModal } from "@/components/ui/GoalCreateModal";
 import { GoalEditModal } from "@/components/ui/GoalEditModal";
 import { GoalContributeModal } from "@/components/ui/GoalContributeModal";
-import { WifiOff } from "lucide-react";
-import type { Goal } from "@/lib/types";
+import { GoalRebalanceModal } from "@/components/ui/GoalRebalanceModal";
+import { WifiOff, Zap, ShieldCheck, Sparkles, AlertTriangle } from "lucide-react";
+import type { Goal, GoalCapacityInfo, RebalancePlan } from "@/lib/types";
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[] | null>(null);
+  const [capacity, setCapacity] = useState<GoalCapacityInfo | null>(null);
+  const [rebalancePlan, setRebalancePlan] = useState<RebalancePlan | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const [cachedAt, setCachedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showRebalance, setShowRebalance] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [contributeGoal, setContributeGoal] = useState<Goal | null>(null);
 
-  const loadGoals = useCallback(() => {
+  const loadData = useCallback(() => {
     getGoals()
       .then((result) => {
         setGoals(result.data);
@@ -31,11 +35,19 @@ export default function GoalsPage() {
         setError(null);
       })
       .catch((e) => setError(e.response?.data?.error ?? "Failed to load goals"));
+
+    getGoalCapacity()
+      .then((cap) => setCapacity(cap))
+      .catch((err) => console.error("Failed to load goal capacity:", err));
+
+    getGoalRebalancePlan()
+      .then((plan) => setRebalancePlan(plan))
+      .catch((err) => console.error("Failed to load rebalance plan:", err));
   }, []);
 
   useEffect(() => {
-    loadGoals();
-  }, [loadGoals]);
+    loadData();
+  }, [loadData]);
 
   if (error) {
     return (
@@ -45,7 +57,7 @@ export default function GoalsPage() {
           <p className="text-sm text-muted">{error}</p>
           <button
             type="button"
-            onClick={loadGoals}
+            onClick={loadData}
             className="mt-3 text-xs font-bold text-primary hover:underline cursor-pointer"
           >
             Retry
@@ -60,34 +72,140 @@ export default function GoalsPage() {
       <div className="pb-4">
         <Header onAdd={() => setShowCreate(true)} />
         <div className="mt-4 animate-pulse space-y-3">
-          <div className="h-32 rounded-2xl bg-muted-bg" />
-          <div className="h-32 rounded-2xl bg-muted-bg" />
+          <div className="h-28 rounded-2xl bg-muted-bg" />
+          <div className="h-36 rounded-2xl bg-muted-bg" />
+          <div className="h-36 rounded-2xl bg-muted-bg" />
         </div>
       </div>
     );
   }
 
+  const hasMultipleGoals = goals.filter((g) => g.status !== "completed").length >= 2;
+  const isOverAllocated = rebalancePlan?.isOverAllocated ?? false;
+
   return (
-    <div className="goals-page pb-8">
+    <div className="goals-page pb-8 space-y-4">
       <Header onAdd={() => setShowCreate(true)} />
 
       {/* Stale-data badge */}
       {fromCache && cachedAt !== null && (
-        <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+        <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
           <WifiOff size={13} />
           <span>Showing offline data — last updated {formatRelativeTime(cachedAt)}</span>
         </div>
       )}
 
+      {/* Master Capacity & Auto-Allocation Overview Card */}
+      {capacity && capacity.hasIncome && (
+        <Card className="p-4 sm:p-5 bg-gradient-to-br from-card via-card to-primary-soft/10 border-card-border shadow-xs space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+                <ShieldCheck size={14} className="text-primary" />
+                <span>Income-Protected Goals Engine</span>
+              </div>
+              <p className="text-xs text-muted mt-0.5">
+                Every month, your allocated goal money is automatically reserved to safeguard daily essentials.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold text-[11px] shrink-0">
+                <Zap size={12} className="fill-primary" />
+                <span>Auto-Allocating</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 pt-1 border-t border-card-border/60 text-center">
+            <div className="p-2 rounded-xl bg-muted-bg/60">
+              <span className="text-[10px] text-muted block uppercase font-semibold">Committed</span>
+              <span className="text-xs sm:text-sm font-bold text-foreground font-mono">
+                {formatINR(capacity.existingMonthlyCommitmentRupees)}
+                <span className="text-[10px] text-muted font-normal">/mo</span>
+              </span>
+            </div>
+
+            <div className="p-2 rounded-xl bg-muted-bg/60">
+              <span className="text-[10px] text-muted block uppercase font-semibold">Safe Ceiling</span>
+              <span className="text-xs sm:text-sm font-bold text-foreground font-mono">
+                {formatINR(capacity.maxAllowedMonthlyRupees)}
+                <span className="text-[10px] text-muted font-normal">/mo</span>
+              </span>
+            </div>
+
+            <div className="p-2 rounded-xl bg-muted-bg/60">
+              <span className="text-[10px] text-muted block uppercase font-semibold">Active Goals</span>
+              <span className="text-xs sm:text-sm font-bold text-primary font-mono">
+                {capacity.activeGoalsCount} / {capacity.maxGoalsCount}
+              </span>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* AI Smart Rebalancing Suggestion Card */}
+      {rebalancePlan && (isOverAllocated || (hasMultipleGoals && rebalancePlan.recommendations.length > 0)) && (
+        <div
+          className={`rounded-2xl p-4 border transition-all duration-200 ${
+            isOverAllocated
+              ? "bg-amber-500/10 border-amber-500/25 text-amber-900 dark:text-amber-200"
+              : "bg-primary/5 border-primary/20 text-foreground"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider">
+                {isOverAllocated ? (
+                  <>
+                    <AlertTriangle size={15} className="text-amber-500" />
+                    <span className="text-amber-600 dark:text-amber-400">
+                      AI Allocation Alert: High Daily Pressure
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={15} className="text-primary" />
+                    <span className="text-primary">
+                      AI Goal Rebalancing Opportunity
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <p className="text-xs text-muted leading-relaxed max-w-xl">
+                {isOverAllocated ? (
+                  <>
+                    Aapne total <strong>{formatINR(rebalancePlan.currentTotalMonthlyCommitmentRupees)}/mo</strong> goals me allocate kiya hai, jo aapke safe envelope ko exceed kar raha hai. AI recommends rebalancing your goals to free up <strong>{formatINR(rebalancePlan.monthlySavingsFreedRupees)}/month</strong> (<span className="text-emerald-600 dark:text-emerald-400 font-bold">+{formatINR(rebalancePlan.dailySafeToSpendGainRupees)}/day</span> extra Safe-to-Spend).
+                  </>
+                ) : (
+                  <>
+                    AI can intelligently balance monthly targets across your {goals.filter((g) => g.status !== "completed").length} active goals based on urgency, horizons, and income math.
+                  </>
+                )}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowRebalance(true)}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-xs hover:opacity-90 transition-opacity cursor-pointer shrink-0"
+            >
+              <Sparkles size={13} />
+              <span>{isOverAllocated ? "Rebalance with AI" : "Optimize Allocations"}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {goals.length === 0 ? (
-        <Card className="mt-6 p-8 text-center space-y-4">
+        <Card className="p-8 text-center space-y-4">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-3xl shadow-xs">
             🎯
           </span>
           <div>
             <h3 className="text-sm font-bold text-foreground">No Goals Created Yet</h3>
             <p className="mt-1 text-xs text-muted max-w-65 mx-auto">
-              Set clear targets for emergency funds, vacations, gadgets, or investments.
+              Set clear milestones for emergency funds, vacations, gadgets, or investments with automated monthly contributions.
             </p>
           </div>
           <button
@@ -115,7 +233,15 @@ export default function GoalsPage() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-sm font-bold text-foreground truncate">{goal.name}</h3>
+                      <div className="flex items-center gap-2 truncate">
+                        <h3 className="text-sm font-bold text-foreground truncate">{goal.name}</h3>
+                        {goal.autoAllocatedThisMonth && !isCompleted && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold shrink-0 border border-emerald-500/20">
+                            <Zap size={10} className="fill-emerald-500" />
+                            <span>Auto-Deposited</span>
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5">
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -164,13 +290,20 @@ export default function GoalsPage() {
 
                 {/* Footer action */}
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[11px] text-muted">
-                    {goal.monthlyTarget > 0 ? (
-                      <>Target: <span className="font-semibold text-foreground">{formatINR(goal.monthlyTarget / 100)}</span>/mo</>
-                    ) : (
-                      goal.deadline ? `Target: ${goal.deadline}` : "Ongoing savings"
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-muted">
+                      {goal.monthlyTarget > 0 ? (
+                        <>Monthly Auto: <span className="font-semibold text-foreground">{formatINR(goal.monthlyTarget / 100)}</span>/mo</>
+                      ) : (
+                        goal.deadline ? `Target: ${goal.deadline}` : "Ongoing savings"
+                      )}
+                    </span>
+                    {goal.monthlyTarget > 0 && !isCompleted && (
+                      <span className="text-[10px] text-primary/80 font-medium">
+                        Deducted from Safe-to-Spend automatically
+                      </span>
                     )}
-                  </span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -186,7 +319,7 @@ export default function GoalsPage() {
                         className="flex items-center gap-1 px-3 py-1 rounded-xl bg-primary-soft text-primary hover:bg-primary hover:text-primary-foreground text-xs font-bold transition-all duration-150 cursor-pointer shadow-xs"
                       >
                         <Icon name="plus" size={13} />
-                        <span>Deposit</span>
+                        <span>Manual Add</span>
                       </button>
                     )}
                   </div>
@@ -200,21 +333,27 @@ export default function GoalsPage() {
       <GoalCreateModal
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreated={loadGoals}
+        onCreated={loadData}
       />
 
       <GoalEditModal
         goal={editingGoal}
         open={!!editingGoal}
         onClose={() => setEditingGoal(null)}
-        onUpdated={loadGoals}
+        onUpdated={loadData}
       />
 
       <GoalContributeModal
         goal={contributeGoal}
         open={!!contributeGoal}
         onClose={() => setContributeGoal(null)}
-        onContributed={loadGoals}
+        onContributed={loadData}
+      />
+
+      <GoalRebalanceModal
+        open={showRebalance}
+        onClose={() => setShowRebalance(false)}
+        onApplied={loadData}
       />
     </div>
   );
@@ -222,10 +361,10 @@ export default function GoalsPage() {
 
 function Header({ onAdd }: { onAdd: () => void }) {
   return (
-    <header className="flex items-center justify-between px-1 py-5">
+    <header className="flex items-center justify-between px-1 py-4">
       <div>
         <h1 className="text-[22px] font-bold tracking-tight text-foreground">Savings Goals</h1>
-        <p className="text-xs text-muted mt-0.5">Build disciplined wealth toward milestones</p>
+        <p className="text-xs text-muted mt-0.5">Automated wealth building with income protection</p>
       </div>
       <div className="flex items-center gap-3">
         <button

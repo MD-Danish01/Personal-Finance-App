@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { getAuthenticatedUser, unauthorizedResponse } from "@/lib/auth-helpers";
 import { eq, and } from "drizzle-orm";
+import { validateGoalTarget } from "@/lib/goals-engine";
 
 export async function PUT(
   req: NextRequest,
@@ -27,6 +28,11 @@ export async function PUT(
       typeof targetAmount === "number"
         ? Math.round(targetAmount)
         : parseInt(targetAmount, 10);
+    const monthlyTargetPaise = monthlyTarget
+      ? typeof monthlyTarget === "number"
+        ? Math.round(monthlyTarget)
+        : parseInt(monthlyTarget, 10)
+      : 0;
 
     if (isNaN(targetPaise) || targetPaise <= 0) {
       return NextResponse.json(
@@ -43,6 +49,21 @@ export async function PUT(
       return NextResponse.json({ error: "Goal not found" }, { status: 404 });
     }
 
+    // Validate updated target against safe income capacity
+    const validation = await validateGoalTarget({
+      userId: user.id,
+      targetAmountPaise: targetPaise,
+      monthlyTargetPaise,
+      excludeGoalId: goalId,
+    });
+
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: 400 },
+      );
+    }
+
     const isCompleted = existingGoal.currentAmount >= targetPaise;
     const newStatus = isCompleted ? "completed" : "on_track";
 
@@ -53,7 +74,7 @@ export async function PUT(
         icon: icon ?? existingGoal.icon,
         targetAmount: targetPaise,
         deadline: deadline || null,
-        monthlyTarget: monthlyTarget ? Math.round(Number(monthlyTarget)) : 0,
+        monthlyTarget: monthlyTargetPaise,
         status: newStatus,
         updatedAt: new Date(),
       })

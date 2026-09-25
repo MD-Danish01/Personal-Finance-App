@@ -8,6 +8,7 @@ interface SafeToSpendCardProps {
   isOverDailyBudget?: boolean;
   overspentAmount?: number;
   subtitle: string;
+  committedGoalsMonthly?: number;
 }
 
 export function SafeToSpendCard({
@@ -17,6 +18,7 @@ export function SafeToSpendCard({
   isOverDailyBudget = false,
   overspentAmount = 0,
   subtitle,
+  committedGoalsMonthly,
 }: SafeToSpendCardProps) {
   const hasDailyQuota = typeof todayDesignated === "number" && todayDesignated > 0;
   const spentPercent = hasDailyQuota
@@ -82,6 +84,12 @@ export function SafeToSpendCard({
           <p className="safe-spend-subtitle mt-1.5 text-xs font-medium leading-relaxed opacity-90">
             {subtitle}
           </p>
+
+          {typeof committedGoalsMonthly === "number" && committedGoalsMonthly > 0 && (
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs border border-white/20">
+              <span>⚡ {formatINR(committedGoalsMonthly)}/mo protected for goals</span>
+            </div>
+          )}
         </div>
 
         {/* Today's Spending Pace Progress Bar */}

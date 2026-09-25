@@ -83,7 +83,22 @@ export async function checkAndSendOverspendAlert(
     const todaySpentPaise = Number(expenseTotals[0]?.todayTotal ?? 0);
     const todaySpentRupees = Math.round(todaySpentPaise / 100);
 
-    const dailyQuotaPaise = Math.round(monthlyIncome / lastDay);
+    const activeGoals = await db
+      .select({ monthlyTarget: schema.goals.monthlyTarget })
+      .from(schema.goals)
+      .where(
+        and(
+          eq(schema.goals.userId, userId),
+          sql`${schema.goals.status} != 'completed'`,
+        ),
+      );
+    const totalGoalsMonthlyPaise = activeGoals.reduce(
+      (sum, g) => sum + (g.monthlyTarget || 0),
+      0,
+    );
+    const netSpendablePaise = Math.max(0, monthlyIncome - totalGoalsMonthlyPaise);
+
+    const dailyQuotaPaise = Math.round(netSpendablePaise / lastDay);
     const monthStart = new Date(curYear, curMonth - 1, 1);
     const isNewUserThisMonth = profile
       ? profile.createdAt >= monthStart
@@ -112,7 +127,7 @@ export async function checkAndSendOverspendAlert(
         : spentPriorToTodayPaise;
       const remainingMonthPaise = Math.max(
         0,
-        monthlyIncome - consumedBeforeTodayPaise - todaySpentPaise,
+        netSpendablePaise - consumedBeforeTodayPaise - todaySpentPaise,
       );
       const newDailySafeToSpend = Math.max(
         0,
